@@ -14,6 +14,7 @@
 | 2026-07-07 | Corrección de arquitectura a pedido del usuario: sección 10 (Backend) pasa de capas simples a **arquitectura hexagonal** por módulo (ADR-042); sección 9 (Frontend) pasa a **arquitectura funcional + modular (feature-based)**, cerrando además la decisión diferida de data-fetching con TanStack Query (ADR-043). |
 | 2026-07-07 | Refinamiento a pedido del usuario ("Arquitectura Hexagonal + DDD + Clean Architecture PARA EL API"): sección 10 pasa de 3 carpetas (domain/application/infrastructure) a las **4 capas explícitas de Clean Architecture** (domain/application/adapters/main), con tabla de mapeo DDD ↔ Clean ↔ Hexagonal y la Regla de Dependencia explícita (ADR-044, refina ADR-042). |
 | 2026-07-07 | Refinamiento a pedido del usuario ("Frontend: arquitectura funcional + feature-based architecture + componentes reutilizables"): sección 9 se reorganiza en 3 subsecciones explícitas (9.1 feature-based, 9.2 funcional, 9.3 componentes reutilizables), formalizando `shared/components/` en niveles atómicos (atoms/molecules/organisms) con una regla explícita de qué califica como reutilizable (ADR-045, refina ADR-043). |
+| 2026-07-08 | Corrección a pedido del usuario tras ver la implementación de Sprint 0: sección 10 pasa de `src/modules/<contexto>/{domain,application,adapters}` a **estructura layer-first** — `backend/domain`, `backend/application`, `backend/adapters`, `backend/main` al tope, con el Bounded Context como subcarpeta dentro de cada capa. Se agrega la resolución de imports entre capas vía path aliases + `tsc-alias` (ADR-046, refina ADR-042/044). Aplicado y verificado en el código de Sprint 0. |
 
 ---
 
@@ -217,56 +218,62 @@ shared/components/
    Las flechas de dependencia siempre apuntan hacia el centro ▲
 ```
 
-**Árbol de carpetas** (por módulo/Bounded Context, Fase 2 — el monolito modular de ADR-007 no cambia):
+**Árbol de carpetas — layer-first (2026-07-08, a pedido explícito del usuario):** las 4 capas van **directamente al tope de `backend/`** (`backend/domain`, `backend/application`, `backend/adapters`, `backend/main`), no anidadas dentro de `src/modules/<contexto>/`. Cada Bounded Context (Fase 2) es una **subcarpeta dentro de cada capa**, no al revés — así el patrón de capas es visible de inmediato al abrir el proyecto, y agregar un módulo nuevo (donaciones, solicitudes...) significa agregar una subcarpeta con el mismo nombre en `domain/`, `application/` y `adapters/`. El monolito modular de ADR-007 no cambia — los módulos siguen siendo las mismas fronteras de Bounded Context, solo cambia el nivel en el que se anida la capa vs. el módulo.
 
 ```
-src/
-├── modules/
-│   └── <bounded-context>/           (ej. donaciones, solicitudes, trueques, identidad...)
-│       ├── domain/                   ← Capa 1: Entities (Clean) — táctica DDD (Fase 2)
-│       │   ├── entities/               (Aggregate Root + entidades hijas: Donacion, Solicitud+Oferta...)
-│       │   ├── value-objects/          (EstadoDonacion, Urgencia, Ubicacion...)
-│       │   ├── events/                 (eventos de dominio, Fase 2 sección 7)
-│       │   ├── services/               (Domain Services: lógica que cruza aggregates)
-│       │   └── ports/                  (interfaces: IDonacionRepository, IIAProvider... — puertos de salida)
-│       │
-│       ├── application/              ← Capa 2: Use Cases (Clean)
-│       │   ├── use-cases/              (PublicarDonacionUseCase, AceptarSolicitudUseCase...)
-│       │   └── dtos/                   (DTOs internos de aplicación, independientes del transporte HTTP)
-│       │
-│       └── adapters/                 ← Capa 3: Interface Adapters (Clean) = Adaptadores (Hexagonal)
-│           ├── controllers/            (entrada: traduce HTTP → invocación de caso de uso)
-│           ├── repositories/           (salida: implementa los puertos de domain/ports con Prisma/Mongoose)
-│           └── external/               (salida: implementa puertos hacia Claude/Cloudinary/Mapas/n8n — solo en los módulos que los declaran)
+backend/
+├── domain/                           ← Capa 1: Entities (Clean) — táctica DDD (Fase 2)
+│   └── <bounded-context>/              (ej. identidad, donaciones, solicitudes, trueques...)
+│       ├── entities/                     (Aggregate Root + entidades hijas: Usuario, Donacion...)
+│       ├── value-objects/                (Rol, EstadoDonacion, Urgencia, Ubicacion...)
+│       ├── events/                       (eventos de dominio, Fase 2 sección 7)
+│       ├── services/                     (Domain Services: lógica que cruza aggregates)
+│       └── ports/                        (interfaces: IUsuarioRepository, IIAProvider... — puertos de salida)
 │
-└── main/                             ← Capa 4: Frameworks & Drivers (Clean) — composition root, único lugar con detalle de framework
-    ├── express-app.ts                  (instancia Express, monta middlewares globales de Fase 6/9)
-    ├── prisma-client.ts                 (instancia única de PrismaClient)
+├── application/                      ← Capa 2: Use Cases (Clean)
+│   └── <bounded-context>/
+│       ├── use-cases/                    (RegistrarUsuarioUseCase, PublicarDonacionUseCase...)
+│       └── dtos/                         (DTOs internos de aplicación, independientes del transporte HTTP)
+│
+├── adapters/                         ← Capa 3: Interface Adapters (Clean) = Adaptadores (Hexagonal)
+│   └── <bounded-context>/
+│       ├── controllers/                  (entrada: traduce HTTP → invocación de caso de uso)
+│       ├── repositories/                 (salida: implementa los puertos de domain/ports con Prisma/Mongoose)
+│       ├── security/                     (salida: bcrypt, JWT — solo en identidad)
+│       └── external/                     (salida: Claude/Cloudinary/Mapas/n8n — solo en los módulos que los declaran)
+│
+└── main/                              ← Capa 4: Frameworks & Drivers (Clean) — composition root único, no se repite por módulo
+    ├── express-app.ts                    (instancia Express, monta middlewares globales de Fase 6/9)
+    ├── prisma-client.ts                   (instancia única de PrismaClient)
     ├── mongoose-connection.ts
-    ├── di-container.ts                  (wiring: qué adaptador concreto se inyecta en cada caso de uso)
-    └── routes/<bounded-context>.routes.ts   (por módulo: conecta verbos HTTP → controller)
+    ├── env.ts, logger.ts
+    ├── di-container.ts                    (wiring: qué adaptador concreto se inyecta en cada caso de uso)
+    ├── middlewares/                       (auth, rbac, error-handler — Fase 9)
+    └── routes/<bounded-context>.routes.ts (por módulo: conecta verbos HTTP → controller)
 ```
+
+**Resolución de imports entre capas:** dado que `domain/identidad/` y `application/identidad/` ya no son carpetas vecinas (viven bajo raíces distintas), los imports que cruzan de capa usan **path aliases de TypeScript** (`@domain/*`, `@application/*`, `@adapters/*`, `@main/*`) en vez de rutas relativas largas (`../../../domain/...`) — configurados en `tsconfig.json` (`paths`) y resueltos en el build de producción con `tsc-alias` (ya que `tsc` no reescribe alias en el JS compilado). Los imports **dentro** de una misma capa/módulo (ej. `domain/identidad/entities/` → `domain/identidad/value-objects/`) siguen usando rutas relativas simples, sin alias.
 
 **Mapeo de conceptos** (para que quede trazable qué patrón aporta qué):
 
 | Concepto | DDD (Fase 2) | Anillo de Clean Architecture | Rol Hexagonal | Carpeta |
 |---|---|---|---|---|
-| Aggregate Root / Entidad | Aggregate, Entidad | 1. Entities | Núcleo | `domain/entities/` |
-| Value Object | Value Object | 1. Entities | Núcleo | `domain/value-objects/` |
-| Evento de dominio | Domain Event | 1. Entities | Núcleo | `domain/events/` |
-| Lógica que cruza aggregates | Domain Service | 1. Entities | Núcleo | `domain/services/` |
-| Contrato de persistencia | Repository (interfaz) | 1. Entities (la interfaz vive en el núcleo, no la implementación) | Puerto de salida | `domain/ports/` |
-| Acción del sistema | Application Service | 2. Use Cases | Puerto de entrada + su lógica | `application/use-cases/` |
-| Controller HTTP | — | 3. Interface Adapters | Adaptador de entrada (driving) | `adapters/controllers/` |
-| Implementación de Repository | Repository (implementación) | 3. Interface Adapters ("Gateway") | Adaptador de salida (driven) | `adapters/repositories/` |
-| Cliente de IA/Cloudinary/Mapas/n8n | — | 3. Interface Adapters | Adaptador de salida (driven) | `adapters/external/` |
+| Aggregate Root / Entidad | Aggregate, Entidad | 1. Entities | Núcleo | `domain/<contexto>/entities/` |
+| Value Object | Value Object | 1. Entities | Núcleo | `domain/<contexto>/value-objects/` |
+| Evento de dominio | Domain Event | 1. Entities | Núcleo | `domain/<contexto>/events/` |
+| Lógica que cruza aggregates | Domain Service | 1. Entities | Núcleo | `domain/<contexto>/services/` |
+| Contrato de persistencia | Repository (interfaz) | 1. Entities (la interfaz vive en el núcleo, no la implementación) | Puerto de salida | `domain/<contexto>/ports/` |
+| Acción del sistema | Application Service | 2. Use Cases | Puerto de entrada + su lógica | `application/<contexto>/use-cases/` |
+| Controller HTTP | — | 3. Interface Adapters | Adaptador de entrada (driving) | `adapters/<contexto>/controllers/` |
+| Implementación de Repository | Repository (implementación) | 3. Interface Adapters ("Gateway") | Adaptador de salida (driven) | `adapters/<contexto>/repositories/` |
+| Cliente de IA/Cloudinary/Mapas/n8n/bcrypt/JWT | — | 3. Interface Adapters | Adaptador de salida (driven) | `adapters/<contexto>/external/` o `security/` |
 | Express app, cliente Prisma, DI | — | 4. Frameworks & Drivers | Infraestructura pura / composition root | `main/` |
 
-**Beneficio concreto para este proyecto:** `domain` y `application` se prueban (Fase 6, sección 9) sustituyendo los adaptadores por dobles en memoria, sin levantar Postgres/MongoDB/Claude reales — relevante dado el plazo de 6 semanas. El `main/di-container.ts` centralizado evita duplicar configuración de Express/Prisma en cada uno de los ~10 módulos.
+**Beneficio concreto para este proyecto:** `domain` y `application` se prueban (Fase 6, sección 9) sustituyendo los adaptadores por dobles en memoria, sin levantar Postgres/MongoDB/Claude reales — relevante dado el plazo de 6 semanas. El `main/di-container.ts` centralizado evita duplicar configuración de Express/Prisma en cada uno de los ~10 módulos. La estructura layer-first hace el patrón arquitectónico visible desde el primer nivel de carpetas, sin tener que entrar a un módulo específico para verlo.
 
-**ORM/ODM** (sin cambios, ya decidido — ADR-008): Prisma para PostgreSQL, Mongoose para MongoDB, instanciados en `main/` e inyectados en los adaptadores de `adapters/repositories/`.
+**ORM/ODM** (sin cambios, ya decidido — ADR-008): Prisma para PostgreSQL, Mongoose para MongoDB, instanciados en `main/` e inyectados en los adaptadores de `adapters/<contexto>/repositories/`.
 
-→ **ADR-042** (Hexagonal por módulo) refinado por **ADR-044** (las 4 capas explícitas de Clean Architecture + mapeo con DDD).
+→ **ADR-042** (Hexagonal por módulo) refinado por **ADR-044** (4 capas explícitas de Clean Architecture) y por **ADR-046** (estructura layer-first: capas al tope de `backend/`, Bounded Context como subcarpeta dentro de cada capa, en vez de al revés).
 
 ---
 

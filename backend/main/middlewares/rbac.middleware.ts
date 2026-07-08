@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import type { Rol } from '../../modules/identidad/domain/value-objects/Rol.js';
+import type { Rol } from '@domain/identidad/value-objects/Rol.js';
 
 /** Matriz RBAC estricta (Fase 4, ADR-016). Se aplica después de authMiddleware. */
 export function rbacMiddleware(rolesPermitidos: Rol[]) {

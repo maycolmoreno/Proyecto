@@ -1,11 +1,11 @@
 import type { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { Prisma } from '@prisma/client';
-import { CorreoYaRegistradoError } from '../../modules/identidad/application/use-cases/RegistrarUsuarioUseCase.js';
+import { CorreoYaRegistradoError } from '@application/identidad/use-cases/RegistrarUsuarioUseCase.js';
 import {
   CredencialesInvalidasError,
   UsuarioInactivoError,
-} from '../../modules/identidad/application/use-cases/IniciarSesionUseCase.js';
+} from '@application/identidad/use-cases/IniciarSesionUseCase.js';
 import { logger } from '../logger.js';
 
 /** Envelope de error único (Fase 4, ADR-018). Mensajes en español, claros y accionables (RNF-015). */

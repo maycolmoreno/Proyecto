@@ -1,5 +1,5 @@
 import bcrypt from 'bcrypt';
-import type { IPasswordHasher } from '../../domain/ports/IPasswordHasher.js';
+import type { IPasswordHasher } from '@domain/identidad/ports/IPasswordHasher.js';
 
 const SALT_ROUNDS = 10;
 

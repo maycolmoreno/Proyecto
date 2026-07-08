@@ -1,4 +1,4 @@
-import type { TokenPayload } from '../../modules/identidad/domain/ports/ITokenService.js';
+import type { TokenPayload } from '@domain/identidad/ports/ITokenService.js';
 
 declare global {
   namespace Express {

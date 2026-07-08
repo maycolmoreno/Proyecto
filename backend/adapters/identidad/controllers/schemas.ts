@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ROLES } from '../../domain/value-objects/Rol.js';
+import { ROLES } from '@domain/identidad/value-objects/Rol.js';
 
 // Fase 4, DTOs. RegistroUsuarioDTO / LoginDTO.
 export const registroSchema = z.object({

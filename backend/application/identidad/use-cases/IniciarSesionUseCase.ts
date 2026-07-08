@@ -1,7 +1,7 @@
-import type { IUsuarioRepository } from '../../domain/ports/IUsuarioRepository.js';
-import type { IPasswordHasher } from '../../domain/ports/IPasswordHasher.js';
-import type { ITokenService } from '../../domain/ports/ITokenService.js';
-import type { UsuarioPublico } from '../../domain/entities/Usuario.js';
+import type { IUsuarioRepository } from '@domain/identidad/ports/IUsuarioRepository.js';
+import type { IPasswordHasher } from '@domain/identidad/ports/IPasswordHasher.js';
+import type { ITokenService } from '@domain/identidad/ports/ITokenService.js';
+import type { UsuarioPublico } from '@domain/identidad/entities/Usuario.js';
 
 export interface IniciarSesionInput {
   correo: string;

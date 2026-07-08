@@ -5,7 +5,7 @@
     "moduleResolution": "NodeNext",
     "lib": ["ES2022"],
     "outDir": "dist",
-    "rootDir": "src",
+    "rootDir": ".",
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "esModuleInterop": true,
@@ -14,12 +14,14 @@
     "resolveJsonModule": true,
     "declaration": false,
     "sourceMap": true,
-    "baseUrl": "src",
+    "baseUrl": ".",
     "paths": {
-      "@modules/*": ["modules/*"],
+      "@domain/*": ["domain/*"],
+      "@application/*": ["application/*"],
+      "@adapters/*": ["adapters/*"],
       "@main/*": ["main/*"]
     }
   },
-  "include": ["src/**/*.ts"],
+  "include": ["domain/**/*.ts", "application/**/*.ts", "adapters/**/*.ts", "main/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

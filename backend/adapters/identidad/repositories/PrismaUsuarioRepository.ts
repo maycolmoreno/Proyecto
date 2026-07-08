@@ -1,8 +1,8 @@
 import type { PrismaClient, Usuario as UsuarioRow } from '@prisma/client';
-import { Usuario } from '../../domain/entities/Usuario.js';
-import type { IUsuarioRepository } from '../../domain/ports/IUsuarioRepository.js';
-import type { Rol } from '../../domain/value-objects/Rol.js';
-import type { EstadoUsuario } from '../../domain/value-objects/EstadoUsuario.js';
+import { Usuario } from '@domain/identidad/entities/Usuario.js';
+import type { IUsuarioRepository } from '@domain/identidad/ports/IUsuarioRepository.js';
+import type { Rol } from '@domain/identidad/value-objects/Rol.js';
+import type { EstadoUsuario } from '@domain/identidad/value-objects/EstadoUsuario.js';
 
 /** Adaptador de salida (Hexagonal) — implementa IUsuarioRepository con Prisma (ADR-008). */
 export class PrismaUsuarioRepository implements IUsuarioRepository {

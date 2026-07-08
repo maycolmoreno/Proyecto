@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { registroSchema, loginSchema } from './schemas.js';
-import type { RegistrarUsuarioUseCase } from '../../application/use-cases/RegistrarUsuarioUseCase.js';
-import type { IniciarSesionUseCase } from '../../application/use-cases/IniciarSesionUseCase.js';
+import type { RegistrarUsuarioUseCase } from '@application/identidad/use-cases/RegistrarUsuarioUseCase.js';
+import type { IniciarSesionUseCase } from '@application/identidad/use-cases/IniciarSesionUseCase.js';
 
 /** Adaptador de entrada (Hexagonal) — traduce HTTP a invocaciones de caso de uso. Sin lógica de negocio. */
 export class AuthController {

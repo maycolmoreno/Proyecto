@@ -12,46 +12,46 @@
 | 2026-07-07 | Aprobada por el usuario sin cambios. Se avanza a Fase 7. |
 | 2026-07-07 | Corrección de arquitectura a pedido del usuario: la estructura de módulos (sección 1) pasa de capas técnicas (`routes/controllers/services/repositories`) a **arquitectura hexagonal** (`domain/application/infrastructure`) por Bounded Context, aplicando la decisión fijada en Fase 1 (ADR-042). Servicios, repositorios e integraciones (secciones 3-6) no cambian de responsabilidad, solo se reencuadran como puertos/adaptadores. |
 | 2026-07-07 | Refinamiento a pedido del usuario ("Arquitectura Hexagonal + DDD + Clean Architecture PARA EL API"): sección 1 pasa a las **4 capas explícitas de Clean Architecture** (`domain/application/adapters` por módulo + `main/` como composition root único), alineada con Fase 1 sección 10 (ADR-044). Secciones 3, 4 y 6 actualizan sus referencias de carpeta (`infrastructure/` → `adapters/`). |
+| 2026-07-08 | Corrección a pedido del usuario tras ver el código de Sprint 0: sección 1 pasa a **estructura layer-first** — capas al tope de `backend/`, Bounded Context como subcarpeta dentro de cada capa. Se documenta la resolución de imports entre capas vía path aliases + `tsc-alias` (ADR-046, refina ADR-042/044). Aplicado y verificado en el código real. |
 
 ---
 
-## 1. Estructura de módulos — Hexagonal + DDD + Clean Architecture
+## 1. Estructura de módulos — Hexagonal + DDD + Clean Architecture (layer-first)
 
-**Corrección de esta sección (2026-07-07, a pedido explícito del usuario):** se alinea con el refinamiento de Fase 1, sección 10 (ADR-044, refina ADR-042) — **4 capas explícitas de Clean Architecture** dentro de cada módulo (Bounded Context, Fase 2), con `main/` como composition root centralizado a nivel de aplicación (no repetido por módulo). Monolito modular (ADR-007) sin cambios.
+**Corrección de esta sección (2026-07-08, a pedido explícito del usuario tras revisar el código de Sprint 0):** las 4 capas van **al tope de `backend/`** (`backend/domain`, `backend/application`, `backend/adapters`, `backend/main`) en vez de anidadas dentro de `src/modules/<contexto>/` — cada Bounded Context es una subcarpeta *dentro* de cada capa, no al revés (ADR-046, refina ADR-042/044). Monolito modular (ADR-007) sin cambios — siguen siendo las mismas fronteras de módulo.
 
 ```
-src/
-├── modules/
-│   ├── identidad/
-│   │   ├── domain/
-│   │   │   ├── entities/       (Usuario)
-│   │   │   ├── value-objects/  (Rol, Ubicacion)
-│   │   │   ├── events/         (UsuarioRegistrado)
-│   │   │   └── ports/          (IUsuarioRepository)
-│   │   ├── application/
-│   │   │   └── use-cases/      (RegistrarUsuarioUseCase, IniciarSesionUseCase)
-│   │   └── adapters/
-│   │       ├── controllers/    (usuarios.controller.ts)
-│   │       └── repositories/   (PrismaUsuarioRepository — implementa IUsuarioRepository)
-│   ├── categorias/             (misma forma: domain/application/adapters)
-│   ├── donaciones/
-│   ├── solicitudes/            (incluye ofertas)
-│   ├── trueques/                (incluye propuestas)
-│   ├── entregas/
-│   ├── mensajeria/
-│   ├── notificaciones/
-│   ├── ia/                      (chatbot, clasificación, matching — domain/ports declara IIAProvider/IMapsProvider; adapters/external los implementa)
-│   └── administracion/          (moderación — sin entidad propia, solo application/use-cases + adapters/controllers)
-└── main/                       ← composition root único, no se repite por módulo
-    ├── express-app.ts            (middlewares globales: auth, rbac, validation, errorHandler, audit — Fase 9)
+backend/
+├── domain/
+│   └── identidad/
+│       ├── entities/       (Usuario)
+│       ├── value-objects/  (Rol, EstadoUsuario)
+│       ├── events/         (UsuarioRegistrado)
+│       └── ports/          (IUsuarioRepository, IPasswordHasher, ITokenService)
+├── application/
+│   └── identidad/
+│       └── use-cases/      (RegistrarUsuarioUseCase, IniciarSesionUseCase)
+├── adapters/
+│   └── identidad/
+│       ├── controllers/    (auth.controller.ts, usuarios.controller.ts, schemas.ts)
+│       ├── repositories/   (PrismaUsuarioRepository — implementa IUsuarioRepository)
+│       └── security/       (BcryptPasswordHasher, JwtTokenService)
+│   # próximos módulos (Sprint 1+) agregan su propia subcarpeta aquí:
+│   # domain/donaciones/, application/donaciones/, adapters/donaciones/...
+└── main/                   ← composition root único, no se repite por módulo
+    ├── express-app.ts        (middlewares globales: auth, rbac, validation, errorHandler, audit — Fase 9)
     ├── prisma-client.ts
-    ├── mongoose-connection.ts
-    ├── event-bus.ts               (event bus in-process, ver sección 5)
-    ├── di-container.ts            (wiring: adaptador concreto → puerto, por caso de uso)
+    ├── mongoose-connection.ts  (se agrega cuando el primer módulo respaldado por Mongo lo necesite)
+    ├── event-bus.ts            (event bus in-process, ver sección 5 — se agrega con el primer listener real)
+    ├── env.ts, logger.ts
+    ├── di-container.ts        (wiring: adaptador concreto → puerto, por caso de uso)
+    ├── middlewares/           (auth.middleware.ts, rbac.middleware.ts, error-handler.middleware.ts)
     └── routes/<módulo>.routes.ts  (uno por módulo, conecta verbos HTTP → controller)
 ```
 
 **Regla de dependencia (Clean Architecture):** `domain/` no importa nada de `application/`, `adapters/` ni `main/`, ni de librerías externas (Prisma, Express, el SDK de Claude) — solo define **entidades DDD** y **puertos** (interfaces, ej. `IDonacionRepository`, `IIAProvider`). `application/` depende solo de `domain/` (orquesta llamando a puertos, sin saber qué los implementa). `adapters/` depende de `application/` + `domain/` — es la única capa que conoce Prisma/Mongoose/Express/Claude, implementa los puertos (**adaptadores de salida**, Hexagonal) y traduce peticiones HTTP a invocaciones de caso de uso (**adaptador de entrada**, Hexagonal). `main/` es la capa más externa: arma la inyección de dependencias y nunca contiene lógica de negocio.
+
+**Resolución de imports entre capas:** como `domain/identidad/` y `application/identidad/` ya no son carpetas vecinas, los imports que cruzan de capa usan **path aliases de TypeScript** — `@domain/*`, `@application/*`, `@adapters/*`, `@main/*` (`tsconfig.json`, `paths`) — resueltos en producción con `tsc-alias` (paquete de build, ya que `tsc` no reescribe alias en el JS compilado; `tsx` en desarrollo los resuelve nativamente). Los imports dentro de la misma capa/módulo (ej. `domain/identidad/entities/` → `domain/identidad/value-objects/`) siguen usando rutas relativas simples.
 
 Ningún módulo importa el `adapters/repositories` de otro módulo directamente — la comunicación cruzada pasa por el `application/use-cases` público del módulo o por eventos de dominio (respeta las fronteras de Bounded Context de Fase 2, sin cambios).
 
@@ -194,6 +194,7 @@ Pruebas de integración sobre los endpoints críticos de cada Bounded Context Co
 - ADR-023 — Event Bus in-process (no message broker externo).
 - ADR-042 — Arquitectura hexagonal por módulo (decisión originada en Fase 1, aplicada aquí a la estructura de carpetas).
 - ADR-044 — Las 4 capas explícitas de Clean Architecture (domain/application/adapters/main), combinando DDD + Hexagonal + Clean Architecture (decisión originada en Fase 1, aplicada aquí).
+- ADR-046 — Estructura layer-first (capas al tope de `backend/`, Bounded Context como subcarpeta dentro de cada capa) con imports entre capas vía path aliases + `tsc-alias` (decisión originada en Fase 1, aplicada aquí).
 
 ---
 

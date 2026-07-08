@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import { Usuario } from '../../domain/entities/Usuario.js';
-import type { IUsuarioRepository } from '../../domain/ports/IUsuarioRepository.js';
-import type { IPasswordHasher } from '../../domain/ports/IPasswordHasher.js';
-import type { Rol } from '../../domain/value-objects/Rol.js';
+import { Usuario } from '@domain/identidad/entities/Usuario.js';
+import type { IUsuarioRepository } from '@domain/identidad/ports/IUsuarioRepository.js';
+import type { IPasswordHasher } from '@domain/identidad/ports/IPasswordHasher.js';
+import type { Rol } from '@domain/identidad/value-objects/Rol.js';
 
 export interface RegistrarUsuarioInput {
   nombre: string;

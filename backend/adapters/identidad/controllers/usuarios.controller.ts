@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import type { IUsuarioRepository } from '../../domain/ports/IUsuarioRepository.js';
+import type { IUsuarioRepository } from '@domain/identidad/ports/IUsuarioRepository.js';
 
 export class UsuariosController {
   constructor(private readonly usuarioRepository: IUsuarioRepository) {}

@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import type { ITokenService, TokenPayload } from '../../domain/ports/ITokenService.js';
+import type { ITokenService, TokenPayload } from '@domain/identidad/ports/ITokenService.js';
 
 const OCHO_HORAS_EN_SEGUNDOS = 8 * 60 * 60;
 
