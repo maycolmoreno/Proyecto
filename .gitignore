@@ -1,0 +1,19 @@
+node_modules/
+dist/
+build/
+.env
+.env.local
+*.log
+.DS_Store
+coverage/
+
+# Prisma
+backend/prisma/migrations/dev.db
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Estado interno del agente (no forma parte del proyecto)
+.claude/

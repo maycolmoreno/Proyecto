@@ -1,0 +1,52 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0 auto;
+  max-width: 480px;
+  padding: 2rem 1rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+}
+
+.form-field__error {
+  color: #c0392b;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.btn {
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.btn--primario {
+  background: #2563eb;
+  color: white;
+}
+
+.btn--secundario {
+  background: transparent;
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.btn--peligro {
+  background: #c0392b;
+  color: white;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
