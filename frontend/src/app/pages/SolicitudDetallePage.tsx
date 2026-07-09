@@ -12,6 +12,7 @@ import { useSolicitud } from '@features/solicitudes/hooks/useSolicitud';
 import { useCrearOferta } from '@features/solicitudes/hooks/useCrearOferta';
 import { useRechazarOferta } from '@features/solicitudes/hooks/useRechazarOferta';
 import { CoordinacionEntrega } from '@features/entregas/components/CoordinacionEntrega';
+import { MatchesSugeridos } from '@features/ia/components/MatchesSugeridos';
 
 const ROLES_PUEDEN_OFERTAR = ['DONANTE', 'USUARIO_COMUNIDAD'];
 
@@ -127,6 +128,7 @@ export function SolicitudDetallePage(): JSX.Element {
       ) : null}
 
       {ofertaAceptada ? <CoordinacionEntrega idReferencia={ofertaAceptada.donacionId} /> : null}
+      <MatchesSugeridos entidadTipo="SOLICITUD" entidadId={solicitud.data.id} />
     </div>
   );
 }

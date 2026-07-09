@@ -85,6 +85,7 @@ import { ModeracionService } from '@domain/administracion/services/ModeracionSer
 import { ModerarPublicacionUseCase } from '@application/administracion/use-cases/ModerarPublicacionUseCase.js';
 import { ModerarUsuarioUseCase } from '@application/administracion/use-cases/ModerarUsuarioUseCase.js';
 import { ObtenerReportesUseCase } from '@application/administracion/use-cases/ObtenerReportesUseCase.js';
+import { ListarUsuariosUseCase } from '@application/administracion/use-cases/ListarUsuariosUseCase.js';
 import { AdminController } from '@adapters/administracion/controllers/admin.controller.js';
 
 import { MongooseNotificacionRepository } from '@adapters/notificaciones/repositories/MongooseNotificacionRepository.js';
@@ -304,8 +305,14 @@ const moderacionService = new ModeracionService(
 const moderarPublicacionUseCase = new ModerarPublicacionUseCase(moderacionService);
 const moderarUsuarioUseCase = new ModerarUsuarioUseCase(moderacionService);
 const obtenerReportesUseCase = new ObtenerReportesUseCase(moderacionService);
+const listarUsuariosUseCase = new ListarUsuariosUseCase(usuarioRepository);
 
-export const adminController = new AdminController(moderarPublicacionUseCase, moderarUsuarioUseCase, obtenerReportesUseCase);
+export const adminController = new AdminController(
+  moderarPublicacionUseCase,
+  moderarUsuarioUseCase,
+  obtenerReportesUseCase,
+  listarUsuariosUseCase,
+);
 
 // Fase 7, sección 5 (ADR-027) — primer listener real del Event Bus: moderación asistida por IA,
 // nunca bloquea la publicación (NodeEventBus.on ya atrapa errores del listener, main/event-bus.ts).

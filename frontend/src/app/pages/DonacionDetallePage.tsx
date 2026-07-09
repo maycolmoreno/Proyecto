@@ -10,6 +10,7 @@ import { useDonacion } from '@features/donaciones/hooks/useDonacion';
 import { useCancelarDonacion } from '@features/donaciones/hooks/useCancelarDonacion';
 import { useImagenesDonacion } from '@features/donaciones/hooks/useImagenesDonacion';
 import { CoordinacionEntrega } from '@features/entregas/components/CoordinacionEntrega';
+import { MatchesSugeridos } from '@features/ia/components/MatchesSugeridos';
 
 export function DonacionDetallePage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
@@ -67,6 +68,7 @@ export function DonacionDetallePage(): JSX.Element {
       )}
 
       <CoordinacionEntrega idReferencia={donacion.data.id} />
+      <MatchesSugeridos entidadTipo="DONACION" entidadId={donacion.data.id} />
 
       {modalCancelarAbierto ? (
         <Modal

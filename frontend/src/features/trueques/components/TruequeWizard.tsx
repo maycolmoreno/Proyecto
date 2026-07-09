@@ -5,22 +5,23 @@ import { Input } from '@shared/components/atoms/Input';
 import { TextArea } from '@shared/components/atoms/TextArea';
 import { Select } from '@shared/components/atoms/Select';
 import { Button } from '@shared/components/atoms/Button';
-import { LocationPicker } from '@shared/components/molecules/LocationPicker';
 import { IASuggestionBox } from '@shared/components/molecules/IASuggestionBox';
 import { subirACloudinary } from '@shared/lib/cloudinary';
 import { useToast } from '@shared/components/organisms/ToastProvider';
-import type { UbicacionInput } from '@shared/lib/ubicacion';
 import { useCategorias } from '@features/categorias/hooks/useCategorias';
 import { useClasificar } from '@features/ia/hooks/useClasificar';
-import { useCrearDonacion } from '../hooks/useCrearDonacion.js';
-import { donacionesApi } from '../api/donaciones.api.js';
+import { useCrearTrueque } from '../hooks/useCrearTrueque.js';
+import { truequesApi } from '../api/trueques.api.js';
 import type { EstadoObjeto } from '../types/index.js';
 
-// Fase 5, sección 2.4 — 5 pasos (RNF-014). El backend exige que la Donación exista para firmar
-// subida de fotos (POST /donaciones/:id/imagenes/firma) y que `ubicacionRetiro` esté completa si
-// `requiereRetiro=true` (regla de negocio #5) — ambas condiciones solo se cumplen al final. Por eso
-// el paso 3 "Fotos" solo acumula archivos en memoria (preview local); la Donación se crea y las
-// fotos se suben recién al confirmar el paso 5. Decisión documentada en docs/PLAN_FRONTEND.md (F1).
+// Fase 5, sección 2.4 — 5 pasos. Mismo problema de secuencia que DonacionWizard (el backend exige
+// que el Trueque exista para firmar subida de fotos) — el paso 3 solo acumula archivos en memoria;
+// la creación real + subida ocurre al confirmar el paso 5. A diferencia de Donación/Solicitud,
+// Trueque no modela ubicación (TruequeCreateDTO no la incluye, Fase 4 sección 4).
+//
+// El paso 4 "¿qué buscas a cambio?" (Fase 5, sección 2.4) no tiene campo propio en el backend
+// (crearTruequeSchema solo acepta titulo/descripcion/categoriaId/estadoObjeto) — se concatena al
+// final de `descripcion` con un separador visible, decisión documentada en docs/PLAN_FRONTEND.md (F3).
 const TOTAL_PASOS = 5;
 const ESTADOS_OBJETO: { valor: EstadoObjeto; etiqueta: string }[] = [
   { valor: 'NUEVO', etiqueta: 'Nuevo' },
@@ -29,17 +30,14 @@ const ESTADOS_OBJETO: { valor: EstadoObjeto; etiqueta: string }[] = [
   { valor: 'REQUIERE_REPARACION', etiqueta: 'Requiere reparación' },
 ];
 
-const UBICACION_VACIA: UbicacionInput = { provincia: '', ciudad: '' };
-
-export function DonacionWizard(): JSX.Element {
+export function TruequeWizard(): JSX.Element {
   const [paso, setPaso] = useState(1);
   const [categoriaId, setCategoriaId] = useState('');
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [estadoObjeto, setEstadoObjeto] = useState<EstadoObjeto>('BUEN_ESTADO');
   const [archivos, setArchivos] = useState<File[]>([]);
-  const [requiereRetiro, setRequiereRetiro] = useState(false);
-  const [ubicacionRetiro, setUbicacionRetiro] = useState<UbicacionInput>(UBICACION_VACIA);
+  const [queBuscas, setQueBuscas] = useState('');
   const [publicando, setPublicando] = useState(false);
   const [sugerencia, setSugerencia] = useState<{
     categoriaSugerida: string;
@@ -50,7 +48,7 @@ export function DonacionWizard(): JSX.Element {
   const [sugerenciaAplicada, setSugerenciaAplicada] = useState(false);
 
   const categorias = useCategorias();
-  const crearDonacion = useCrearDonacion();
+  const crearTrueque = useCrearTrueque();
   const clasificar = useClasificar();
   const { mostrarToast } = useToast();
   const navigate = useNavigate();
@@ -90,45 +88,38 @@ export function DonacionWizard(): JSX.Element {
   async function publicar(): Promise<void> {
     setPublicando(true);
     try {
-      const donacion = await crearDonacion.mutateAsync({
+      const descripcionFinal = queBuscas.trim()
+        ? `${descripcion}\n\n¿Qué busco a cambio?\n${queBuscas.trim()}`
+        : descripcion;
+
+      const trueque = await crearTrueque.mutateAsync({
         titulo,
-        descripcion,
+        descripcion: descripcionFinal,
         categoriaId,
         estadoObjeto,
-        requiereRetiro,
-        ubicacionRetiro: requiereRetiro ? ubicacionRetiro : undefined,
       });
 
       for (const archivo of archivos) {
-        const firma = await donacionesApi.firmarImagen(donacion.id, archivo.type, archivo.size);
+        const firma = await truequesApi.firmarImagen(trueque.id, archivo.type, archivo.size);
         const resultado = await subirACloudinary(firma, archivo);
-        await donacionesApi.registrarImagen(donacion.id, resultado.url, resultado.publicId);
+        await truequesApi.registrarImagen(trueque.id, resultado.url, resultado.publicId);
       }
 
-      mostrarToast('Donación publicada con éxito.', 'exito');
-      navigate(`/donaciones/${donacion.id}`);
+      mostrarToast('Trueque publicado con éxito.', 'exito');
+      navigate(`/trueques/${trueque.id}`);
     } catch {
-      mostrarToast('No se pudo publicar la donación. Intenta de nuevo.', 'error');
+      mostrarToast('No se pudo publicar el trueque. Intenta de nuevo.', 'error');
     } finally {
       setPublicando(false);
     }
   }
 
-  const etiquetasPaso = ['Categoría y título', 'Descripción y estado', 'Fotos', 'Ubicación de retiro', 'Revisión'];
+  const etiquetasPaso = ['Categoría y título', 'Descripción y estado', 'Fotos', '¿Qué buscas a cambio?', 'Revisión'];
 
-  // Validación por paso — el wizard no usa <form onSubmit>, así que el atributo HTML `required`
-  // de los campos nunca se dispara solo; hay que bloquear el avance explícitamente. Bug real
-  // encontrado en pruebas: "Usar mi ubicación actual" solo llena lat/lng (GPS), nunca
-  // provincia/ciudad (exigiría geocoding inverso, fuera de alcance) — sin este chequeo, el
-  // backend rechazaba la publicación con 400 y el usuario no entendía por qué.
+  // Validación por paso — mismo bug real evitado que en DonacionWizard/SolicitudWizard: el wizard no
+  // usa <form onSubmit>, así que hay que bloquear el avance explícitamente en JS.
   const puedeAvanzar =
-    paso === 1
-      ? Boolean(categoriaId && titulo)
-      : paso === 2
-        ? Boolean(descripcion)
-        : paso === 4 && requiereRetiro
-          ? Boolean(ubicacionRetiro.provincia && ubicacionRetiro.ciudad)
-          : true;
+    paso === 1 ? Boolean(categoriaId && titulo) : paso === 2 ? Boolean(descripcion) : true;
 
   return (
     <div className="wizard">
@@ -187,13 +178,13 @@ export function DonacionWizard(): JSX.Element {
       ) : null}
 
       {paso === 4 ? (
-        <>
-          <label>
-            <input type="checkbox" checked={requiereRetiro} onChange={(e) => setRequiereRetiro(e.target.checked)} />
-            {' '}Requiere que lo retiren en mi ubicación
-          </label>
-          {requiereRetiro ? <LocationPicker value={ubicacionRetiro} onChange={setUbicacionRetiro} /> : null}
-        </>
+        <TextArea
+          label="¿Qué buscas a cambio? (opcional)"
+          name="queBuscas"
+          placeholder="Ej: busco herramientas de jardinería o algo similar…"
+          value={queBuscas}
+          onChange={(e) => setQueBuscas(e.target.value)}
+        />
       ) : null}
 
       {paso === 5 ? (
@@ -205,11 +196,7 @@ export function DonacionWizard(): JSX.Element {
           <p>{descripcion}</p>
           <p>Estado: {ESTADOS_OBJETO.find((e) => e.valor === estadoObjeto)?.etiqueta}</p>
           <p>Fotos: {archivos.length}</p>
-          {requiereRetiro ? (
-            <p>
-              Retiro en: {ubicacionRetiro.ciudad}, {ubicacionRetiro.provincia}
-            </p>
-          ) : null}
+          {queBuscas.trim() ? <p>Busca a cambio: {queBuscas}</p> : null}
           <IASuggestionBox
             sugerencia={sugerencia}
             cargando={clasificar.isPending}
@@ -233,9 +220,6 @@ export function DonacionWizard(): JSX.Element {
             {publicando ? 'Publicando…' : 'Publicar'}
           </Button>
         )}
-        {paso === 4 && requiereRetiro && !puedeAvanzar ? (
-          <p className="form-field__error">Completa provincia y ciudad para continuar.</p>
-        ) : null}
       </div>
     </div>
   );

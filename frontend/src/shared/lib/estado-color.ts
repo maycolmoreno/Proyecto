@@ -3,7 +3,7 @@
 export type GrupoEstado = 'neutral' | 'progreso' | 'exito' | 'cancelado';
 
 const ESTADOS_POR_GRUPO: Record<GrupoEstado, readonly string[]> = {
-  neutral: ['PUBLICADA', 'ABIERTA', 'PUBLICADO'],
+  neutral: ['PUBLICADA', 'ABIERTA', 'PUBLICADO', 'ACTIVO'],
   progreso: [
     'SOLICITADA',
     'EN_REVISION',
@@ -14,9 +14,10 @@ const ESTADOS_POR_GRUPO: Record<GrupoEstado, readonly string[]> = {
     'ACEPTADO',
     'EN_COORDINACION',
     'PENDIENTE',
+    'PROGRAMADA',
   ],
-  exito: ['APROBADA', 'ENTREGADA', 'ATENDIDA', 'INTERCAMBIADO', 'ACEPTADA'],
-  cancelado: ['CANCELADA', 'CANCELADO', 'RECHAZADA'],
+  exito: ['APROBADA', 'ENTREGADA', 'ATENDIDA', 'INTERCAMBIADO', 'ACEPTADA', 'CONFIRMADA'],
+  cancelado: ['CANCELADA', 'CANCELADO', 'RECHAZADA', 'SUSPENDIDO', 'ELIMINADO'],
 };
 
 export function grupoDeEstado(estado: string): GrupoEstado {

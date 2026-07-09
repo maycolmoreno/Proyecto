@@ -33,10 +33,10 @@
 | Sprint | Módulo | Estado |
 |---|---|---|
 | F0 | Fundación (shell, design tokens, componentes base, perfil) | ✅ Cerrado (2026-07-08) — verificado visualmente por el usuario |
-| F1 | Donaciones + Categorías | ✅ Código cerrado (2026-07-08) — ⚠️ pendiente de confirmación visual |
+| F1 | Donaciones + Categorías | ✅ Cerrado (2026-07-09) — verificado por el usuario (publicación con foto, incluye fix de Cloudinary) |
 | F2 | Solicitudes + Ofertas + Entregas | ✅ Código cerrado (2026-07-08) — ⚠️ pendiente de confirmación visual |
-| F3 | Trueques + Propuestas | ⏳ Pendiente |
-| F4 | IA (chatbot + sugerencias) + Administración | ⏳ Pendiente |
+| F3 | Trueques + Propuestas | ✅ Código cerrado (2026-07-09) — verificado end-to-end contra la API real; ⚠️ pendiente de confirmación visual en navegador |
+| F4 | IA (chatbot + sugerencias) + Administración | ✅ Código cerrado (2026-07-09) — verificado end-to-end contra la API real (incluye extensión de backend GET /admin/usuarios); ⚠️ pendiente de confirmación visual en navegador |
 | F5 | Mensajería + Notificaciones + Dashboard + QA final | ⏳ Pendiente |
 
 ---
@@ -128,45 +128,73 @@
 
 ---
 
-## Sprint F3 — Trueques + Propuestas
+## Sprint F3 — Trueques + Propuestas ✅ Código cerrado (2026-07-09)
 
-**DoD:** publicar objeto para trueque, proponer intercambio (NO se auto-acepta), el dueño del origen acepta/rechaza, aparece Entrega.
+**DoD:** publicar objeto para trueque, proponer intercambio (NO se auto-acepta), el dueño del origen acepta/rechaza, aparece Entrega. **Cumplido y verificado end-to-end contra la API real** (ver detalle abajo).
 
 **`features/trueques/`:**
-- [ ] `types/`, `api/trueques.api.ts` (listar, obtener, crear, actualizar, proponer, responder propuesta, firmar/registrar imagen)
-- [ ] `hooks/` — `useTrueques`, `useTrueque`, `useCrearTrueque`, `useProponerTrueque`, `useResponderPropuesta`
-- [ ] `components/TruequeWizard.tsx` — pasos de Fase 5 sección 2.4 (categoría+título → descripción+estado → fotos → "¿qué buscas a cambio?" → revisión+publicar)
-- [ ] Vista de propuestas recibidas dentro del detalle (filtradas por proponente si no es el dueño, mismo patrón de visibilidad que ofertas) + acción de aceptar/rechazar
-- [ ] `app/pages/TruequesPage.tsx`, `TruequeDetallePage.tsx`
+- [x] `types/index.ts` — espejo del backend real (`EstadoObjeto`/`EstadoTrueque`/`EstadoPropuesta`, `Trueque`, `Propuesta`, `CrearTruequeInput`, `ProponerTruequeInput`, `ListarTruequesFiltros`). Trueque no modela ubicación (confirmado en `crearTruequeSchema` del backend — a diferencia de Donación/Solicitud).
+- [x] `api/trueques.api.ts` — listar, obtener, crear, cancelar (PATCH `{cancelar:true}`, no hay DELETE), proponer, aceptarPropuesta/rechazarPropuesta (PATCH `/trueques/:id/propuestas/:propuestaId`), firmar/registrar imagen.
+- [x] `hooks/` — `useTrueques`, `useTrueque`, `useCrearTrueque`, `useCancelarTrueque`, `useProponerTrueque`, `useResponderPropuesta` (expone `{aceptar, rechazar}`, ambas mutaciones invalidan el mismo detalle), `useImagenesTrueque`.
+- [x] `components/TruequeWizard.tsx` — mismo patrón de subida diferida que `DonacionWizard` (el Trueque debe existir antes de firmar imágenes). Sin paso de ubicación.
+- [x] `app/pages/TruequesPage.tsx`, `TruequeDetallePage.tsx`, `NuevaTruequePage.tsx` + rutas en `App.tsx` (`/trueques`, `/trueques/:id` públicas; `/trueques/nuevo` protegida).
+
+**⚠️ Desviación real del plan, documentada:** el paso 4 del wizard ("¿qué buscas a cambio?", Fase 5 sección 2.4) no tiene campo propio en el backend — `crearTruequeSchema` solo acepta `titulo`/`descripcion`/`categoriaId`/`estadoObjeto`. Se implementó como un `TextArea` opcional cuyo contenido se concatena al final de `descripcion` con un separador visible (`\n\n¿Qué busco a cambio?\n...`) antes de enviarlo al backend. No requiere cambio de backend — es una decisión de UI únicamente.
+
+**Propuestas — vista y flujo, verificado end-to-end (curl contra la API real, dos usuarios reales):**
+- [x] El backend ya filtra `propuestasRecibidas` por visibilidad (dueño ve todas, el resto solo la propia) — el frontend solo renderiza lo que llega, sin lógica de filtrado adicional.
+- [x] Selector "Proponer intercambio" en `TruequeDetallePage`: lista los trueques `PUBLICADO` del usuario actual (sin restricción de categoría — a diferencia de las ofertas de Solicitud, `ProponerTruequeUseCase` no la exige).
+- [x] Dueño del trueque origen ve botones Aceptar/Rechazar por propuesta `PENDIENTE`, y Rechazar (revierte) sobre la `ACEPTADA`.
+- [x] Verificado real: crear trueque A (usuario A) → crear trueque B (usuario B) → B propone B contra A → A acepta → `estadoTrueque` de A pasa a `EN_COORDINACION`, propuesta `ACEPTADA`, se crea la Entrega (`tipoOperacion: TRUEQUE`, `idReferencia` = id del trueque **origen**).
+
+**⚠️ Limitación real descubierta y documentada (no bloqueante):** `GET /entregas/por-referencia/:idReferencia` solo resuelve la Entrega cuando `idReferencia` es el trueque **origen** — confirmado con curl: consultar por el id del trueque **ofrecido** devuelve 404, incluso para el propio proponente. Causa: `Trueque` no guarda un back-reference al trueque origen cuando participa como "ofrecido" (`TruequeProps` solo tiene `propuestasRecibidas`, que registra propuestas *sobre sí mismo*, no las que *hizo*) — ver `EntregaAutorizacionService.resolverPartes` y `ResponderPropuestaUseCase` (backend, sin cambios). Agregar esa capacidad exigiría una extensión de backend real (nuevo campo o índice inverso), fuera de alcance de este sprint. **Mitigación en frontend:** `TruequeDetallePage` detecta este caso (`estadoTrueque` en `EN_COORDINACION`/`INTERCAMBIADO` sin ninguna `propuestasRecibidas` en estado `ACEPTADA`) y muestra un mensaje indicando al usuario que revise la coordinación desde el trueque con el que ofertó, en vez de fallar o mostrar datos incorrectos. Verificado con curl que este es exactamente el estado real del trueque ofrecido tras la aceptación.
+
+**Verificación:**
+- [x] `npm run typecheck && npm run lint && npm run build` — limpios.
+- [x] Contenedor `web` reiniciado.
+- [x] End-to-end contra la API real (curl, dos usuarios): registro, login, crear 2 trueques, proponer, aceptar, listar paginado, firmar imagen (Cloudinary) — todos con el status HTTP esperado.
+- [ ] **Verificación visual — pendiente de confirmación del usuario en navegador.**
 
 ---
 
-## Sprint F4 — Inteligencia Artificial + Administración
+## Sprint F4 — Inteligencia Artificial + Administración ✅ Código cerrado (2026-07-09)
 
-**DoD:** sugerencia de IA aparece y es editable en el paso 5 de los 3 wizards; chatbot responde; admin modera desde el panel.
+**DoD:** sugerencia de IA aparece y es editable en el paso 5 de los 3 wizards; chatbot responde; admin modera desde el panel. **Cumplido y verificado end-to-end contra la API real** (ver detalle abajo).
 
 **`features/chatbot/`:**
-- [ ] `types/`, `api/chatbot.api.ts` (`POST /chatbot/mensajes`, `GET /chatbot/conversaciones/:id`)
-- [ ] `hooks/useChatbot` — mantiene `conversacionId` de la primera respuesta, envía sesionId
-- [ ] `components/ChatWidget.tsx` (organismo específico, Fase 5 sección 3) — ícono flotante en todas las páginas (navbar) + vista completa en `/chatbot`
-- [ ] `app/pages/ChatbotPage.tsx`
+- [x] `types/index.ts`, `api/chatbot.api.ts` (`POST /chatbot/mensajes`, `GET /chatbot/conversaciones/:id`)
+- [x] `hooks/useChatbot` — un documento de conversación por usuario en el backend (no por sesión); `sesionId` se genera una vez por pestaña (`crypto.randomUUID()`) y se envía en cada mensaje; `conversacionId` se persiste en `sessionStorage` para restaurar historial entre `ChatWidget` y `/chatbot`.
+- [x] `components/ChatWidget.tsx` — ícono flotante embebido en `AppShell` (solo con sesión activa, ya que `POST /chatbot/mensajes` exige `authMiddleware`), con buffer local de mensaje "pendiente" mientras espera la respuesta del servidor (evita jank del refetch de TanStack Query).
+- [x] `app/pages/ChatbotPage.tsx` — vista completa en `/chatbot`, reutiliza el mismo hook.
+- [x] Verificado real: `POST /chatbot/mensajes` responde con Gemini (~5s), `GET /chatbot/conversaciones/:id` devuelve el historial completo.
 
-**`features/ia/` (clasificación + matching, sin página propia — se integran en flujos existentes):**
-- [ ] `api/ia.api.ts` (`POST /ia/clasificar`, `GET /ia/matching`)
-- [ ] `hooks/useClasificar`, `useMatches`
-- [ ] `shared/components/molecules/IASuggestionBox.tsx` — sugerencia editable, nunca autoaplicada (ADR-010); se conecta al paso 5 de `DonacionWizard`/`SolicitudWizard`/`TruequeWizard` (pendiente desde F1-F3)
-- [ ] Sección "coincidencias sugeridas" en el detalle de publicación (RF-016), usando `PublicacionCard` para mostrar cada match
+**`features/ia/`:**
+- [x] `types/index.ts`, `api/ia.api.ts` (`POST /ia/clasificar`, `GET /ia/matching`)
+- [x] `hooks/useClasificar`, `useMatches`
+- [x] `shared/components/molecules/IASuggestionBox.tsx` — puramente presentacional (no importa `features/ia`, regla de `shared/`); conectado al paso 5 de `DonacionWizard`/`SolicitudWizard`/`TruequeWizard`. Sugerencia editable, nunca autoaplicada (ADR-010): el wizard mapea `categoriaSugerida` (nombre) → `categoriaId` contra su propia lista de categorías al aplicar.
+- [x] `components/MatchesSugeridos.tsx` (específico de `features/ia`) — el backend (`MatchingService`) solo devuelve `{candidatoId, score, razon}` sin datos enriquecidos, así que el hook `useMatches` resuelve cada candidato con `useQueries` contra `donacionesApi`/`solicitudesApi`/`truequesApi` (tipo de candidato es el opuesto al de origen, salvo Trueque↔Trueque) y se renderiza con `PublicacionCard` en las 3 páginas de detalle.
+- [x] Verificado real: `POST /ia/clasificar` devuelve sugerencia coherente contra Gemini. `GET /ia/matching` devolvió 500 en la verificación por cuota agotada del tier gratuito de Gemini (`gemini-2.5-flash-lite`, límite 20/día) — confirmado por el stack trace, que muestra el flujo llegando correctamente hasta `GeminiAdapter.matchScore` (`MatchingService.buscarCoincidencias` → candidatos resueltos → `Promise.all` de `matchScore`). No es un defecto del código nuevo; es el mismo tipo de limitación de tier gratuito ya documentada en Fase 7 (503/429 transitorios). Backend no traduce este error de proveedor a una respuesta tipada (a diferencia de `IAProviderNoConfiguradoError`) — gap conocido, no bloqueante, fuera de alcance de este sprint.
 
 **`features/administracion/`:**
-- [ ] `types/`, `api/administracion.api.ts` (moderar donación/solicitud/trueque/usuario, obtener reportes)
-- [ ] `hooks/useModerarPublicacion`, `useModerarUsuario`, `useReportes`
-- [ ] `app/pages/AdminPage.tsx` — tabs Usuarios/Publicaciones/Reportes (Fase 5 sección 2.7), tabla con acciones Aprobar/Bloquear, solo visible/accesible a ADMINISTRADOR (oculto de la nav principal, ADR-020, acceso vía menú de perfil)
+- [x] `types/index.ts`, `api/administracion.api.ts` (listar usuarios, moderar donación/solicitud/trueque/usuario, obtener reportes)
+- [x] `hooks/useUsuariosAdmin`, `useModerarPublicacion`, `useModerarUsuario`, `useReportes`
+- [x] `app/pages/AdminPage.tsx` — tabs Usuarios/Publicaciones/Reportes (Fase 5 sección 2.7); Publicaciones tiene un sub-selector Donaciones/Solicitudes/Trueques que reutiliza los hooks ya construidos en F1-F3 (`useDonaciones`/`useSolicitudes`/`useTrueques` sin filtro de estado ya listan todo, incluidas canceladas — confirmado en `PrismaDonacionRepository.listar`, sin filtro por defecto). Guard de rol `ADMINISTRADOR` implementado **dentro** de `AdminPage` (no en `RutaProtegida`, que solo exige sesión) — oculto de la nav principal (ADR-020), enlace agregado en `PerfilPage` solo visible para administradores.
+
+**⚠️ Extensión de backend real, no anticipada por el plan:** no existía ningún endpoint para listar usuarios (`IUsuarioRepository` solo tenía `buscarPorId`/`buscarPorCorreo`/`listarPorRol`, y `listarPorRol` no estaba expuesto por HTTP) — la pestaña "Usuarios" del panel admin no tenía forma de poblarse. Confirmado con el usuario antes de construir (mismo criterio que la extensión de Entrega en F2): se agregó `GET /admin/usuarios` completo — `IUsuarioRepository.listar` (paginado, filtros `rol`/`estado`), `PrismaUsuarioRepository.listar`, `ListarUsuariosUseCase` nuevo (application/administracion, no pasa por `ModeracionService` que está scoped a acciones, no a listar), `AdminController.listarUsuarios`, ruta con `soloAdministrador`. Verificado con curl: 200 con datos reales para admin, 403 para no-admin. Detalle completo en `docs/fases/fase-06-backend.md` historial.
+
+**Verificación:**
+- [x] Backend: `npm run typecheck && npm run lint` limpios tras la extensión de `/admin/usuarios`; contenedor `api` reiniciado y probado.
+- [x] Frontend: `npm run typecheck && npm run lint && npm run build` limpios; contenedor `web` reiniciado.
+- [x] End-to-end contra la API real (curl): chatbot (mensaje + historial), clasificar, moderar trueque, moderar usuario (suspender confirmado con GET posterior), listar usuarios (200 admin / 403 no-admin).
+- [ ] **Verificación visual — pendiente de confirmación del usuario en navegador.**
 
 ---
 
 ## Sprint F5 — Mensajería + Notificaciones + Dashboard + QA final
 
 **DoD:** enviar/leer mensajes, ver notificaciones, Inicio muestra KPIs reales, responsive verificado en los 5 breakpoints de Fase 5 sección 5.
+
+**⚠️ Decisión pendiente de este sprint (originada en F3, 2026-07-09):** el modelo `Entrega` no tiene ningún campo de "lugar de encuentro" — solo `modalidad` (`RETIRO_DOMICILIO`/`ENTREGA_DIRECTA`) y `fechaProgramada` (existe en el dominio pero aún no se expone en `CoordinacionEntrega.tsx`, ni siquiera un input de fecha). Esto afecta a Trueques (siempre `ENTREGA_DIRECTA`, `ResponderPropuestaUseCase` fuerza `requiereRetiro: false`) y a Donación/Solicitud cuando no se requiere retiro. El diseño original (Fase 6, historial) asumía que ambas partes coordinarían lugar/hora por Mensajería — decisión confirmada explícitamente con el usuario (no agregar un campo de ubicación a `Entrega` por ahora). Al construir `ConversationThread.tsx`, considerar: (1) exponer `fechaProgramada` con un input en `CoordinacionEntrega`, (2) enlazar "Enviar mensaje" directamente desde `CoordinacionEntrega` cuando `modalidad=ENTREGA_DIRECTA`, para que coordinar el punto de encuentro sea el flujo natural.
 
 **`features/mensajeria/`:**
 - [ ] `types/`, `api/mensajeria.api.ts` (listar conversaciones, listar/enviar mensajes — recordar: `:id` de ruta es el otro participante, no un id de conversación, ver `fase-06-backend.md` historial Sprint 5)

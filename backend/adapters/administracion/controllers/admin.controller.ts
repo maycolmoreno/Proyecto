@@ -1,8 +1,9 @@
 import type { Request, Response, NextFunction } from 'express';
-import { moderarSchema } from './schemas.js';
+import { moderarSchema, listarUsuariosQuerySchema } from './schemas.js';
 import type { ModerarPublicacionUseCase } from '@application/administracion/use-cases/ModerarPublicacionUseCase.js';
 import type { ModerarUsuarioUseCase } from '@application/administracion/use-cases/ModerarUsuarioUseCase.js';
 import type { ObtenerReportesUseCase } from '@application/administracion/use-cases/ObtenerReportesUseCase.js';
+import type { ListarUsuariosUseCase } from '@application/administracion/use-cases/ListarUsuariosUseCase.js';
 
 /** Adaptador de entrada (Hexagonal) — traduce HTTP a invocaciones de caso de uso. Sin lógica de negocio. */
 export class AdminController {
@@ -10,7 +11,18 @@ export class AdminController {
     private readonly moderarPublicacionUseCase: ModerarPublicacionUseCase,
     private readonly moderarUsuarioUseCase: ModerarUsuarioUseCase,
     private readonly obtenerReportesUseCase: ObtenerReportesUseCase,
+    private readonly listarUsuariosUseCase: ListarUsuariosUseCase,
   ) {}
+
+  listarUsuarios = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { page, limit, ...filtros } = listarUsuariosQuerySchema.parse(req.query);
+      const resultado = await this.listarUsuariosUseCase.ejecutar({ filtros, page, limit });
+      res.status(200).json(resultado);
+    } catch (error) {
+      next(error);
+    }
+  };
 
   moderarDonacion = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {

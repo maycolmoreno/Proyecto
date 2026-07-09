@@ -6,10 +6,12 @@ import { TextArea } from '@shared/components/atoms/TextArea';
 import { Select } from '@shared/components/atoms/Select';
 import { Button } from '@shared/components/atoms/Button';
 import { LocationPicker } from '@shared/components/molecules/LocationPicker';
+import { IASuggestionBox } from '@shared/components/molecules/IASuggestionBox';
 import { useToast } from '@shared/components/organisms/ToastProvider';
 import { claseUrgencia } from '@shared/lib/estado-color';
 import type { UbicacionInput } from '@shared/lib/ubicacion';
 import { useCategorias } from '@features/categorias/hooks/useCategorias';
+import { useClasificar } from '@features/ia/hooks/useClasificar';
 import { useCrearSolicitud } from '../hooks/useCrearSolicitud.js';
 import type { Urgencia } from '../types/index.js';
 
@@ -32,11 +34,38 @@ export function SolicitudWizard(): JSX.Element {
   const [urgencia, setUrgencia] = useState<Urgencia>('MEDIA');
   const [evidenciaUrl, setEvidenciaUrl] = useState('');
   const [ubicacion, setUbicacion] = useState<UbicacionInput>(UBICACION_VACIA);
+  const [sugerencia, setSugerencia] = useState<{
+    categoriaSugerida: string;
+    tituloSugerido: string;
+    descripcionSugerida: string;
+    prioridadSugerida: string | null;
+  } | null>(null);
+  const [sugerenciaAplicada, setSugerenciaAplicada] = useState(false);
 
   const categorias = useCategorias();
   const crearSolicitud = useCrearSolicitud();
+  const clasificar = useClasificar();
   const { mostrarToast } = useToast();
   const navigate = useNavigate();
+
+  async function sugerirConIA(): Promise<void> {
+    try {
+      const resultado = await clasificar.mutateAsync({ titulo, descripcion, esSolicitud: true });
+      setSugerencia(resultado);
+    } catch {
+      mostrarToast('No se pudo obtener la sugerencia de IA.', 'error');
+    }
+  }
+
+  function aplicarSugerencia(): void {
+    if (!sugerencia) return;
+    const categoria = (categorias.data ?? []).find((c) => c.nombre === sugerencia.categoriaSugerida);
+    if (categoria) setCategoriaId(categoria.id);
+    setTitulo(sugerencia.tituloSugerido);
+    setDescripcion(sugerencia.descripcionSugerida);
+    if (sugerencia.prioridadSugerida) setUrgencia(sugerencia.prioridadSugerida as Urgencia);
+    setSugerenciaAplicada(true);
+  }
 
   function siguiente(): void {
     setPaso((p) => Math.min(p + 1, TOTAL_PASOS));
@@ -142,7 +171,13 @@ export function SolicitudWizard(): JSX.Element {
           <p>
             Ubicación: {ubicacion.ciudad}, {ubicacion.provincia}
           </p>
-          {/* Sugerencia de IA (RF-015) se conecta en el Sprint F4 — IASuggestionBox. */}
+          <IASuggestionBox
+            sugerencia={sugerencia}
+            cargando={clasificar.isPending}
+            aplicada={sugerenciaAplicada}
+            onSugerir={sugerirConIA}
+            onAplicar={aplicarSugerencia}
+          />
         </div>
       ) : null}
 

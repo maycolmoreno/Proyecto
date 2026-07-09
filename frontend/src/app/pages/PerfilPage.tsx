@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useSesion } from '@features/identidad/hooks/useSesion';
 
 // Fase 5, sección 1: "Ubicación" vive como tab dentro de /perfil, no como ítem de nav propio.
@@ -38,7 +39,16 @@ export function PerfilPage(): JSX.Element {
           <dt>Miembro desde</dt>
           <dd>{new Date(usuario.fechaCreacion).toLocaleDateString('es-EC')}</dd>
         </dl>
-      ) : (
+      ) : null}
+
+      {/* Acceso al panel de administración oculto de la nav principal (ADR-020) — solo visible aquí. */}
+      {tab === 'cuenta' && usuario.rol === 'ADMINISTRADOR' ? (
+        <p>
+          <Link to="/admin">⚙️ Panel de administración</Link>
+        </p>
+      ) : null}
+
+      {tab === 'ubicacion' ? (
         // El backend no expone todavía un endpoint de ubicación de perfil editable (Fase 4 solo
         // lista GET /usuarios/me para BC-Identidad) — gap documentado, no una funcionalidad inventada.
         <p>
@@ -46,7 +56,7 @@ export function PerfilPage(): JSX.Element {
           propia ubicación en cada wizard). Un editor de ubicación de perfil independiente requiere
           un endpoint nuevo en el backend, fuera del alcance actual.
         </p>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -1,6 +1,11 @@
 import type { PrismaClient, Usuario as UsuarioRow } from '@prisma/client';
 import { Usuario } from '@domain/identidad/entities/Usuario.js';
-import type { IUsuarioRepository } from '@domain/identidad/ports/IUsuarioRepository.js';
+import type {
+  IUsuarioRepository,
+  UsuarioFiltros,
+  Paginacion,
+  ResultadoPaginado,
+} from '@domain/identidad/ports/IUsuarioRepository.js';
 import type { Rol } from '@domain/identidad/value-objects/Rol.js';
 import type { EstadoUsuario } from '@domain/identidad/value-objects/EstadoUsuario.js';
 
@@ -43,6 +48,25 @@ export class PrismaUsuarioRepository implements IUsuarioRepository {
   async listarPorRol(rol: Rol): Promise<Usuario[]> {
     const rows = await this.prisma.usuario.findMany({ where: { rol } });
     return rows.map((row) => this.toDomain(row));
+  }
+
+  async listar(filtros: UsuarioFiltros, paginacion: Paginacion): Promise<ResultadoPaginado<Usuario>> {
+    const where = {
+      ...(filtros.rol ? { rol: filtros.rol } : {}),
+      ...(filtros.estado ? { estado: filtros.estado } : {}),
+    };
+
+    const [rows, total] = await Promise.all([
+      this.prisma.usuario.findMany({
+        where,
+        orderBy: { fechaCreacion: 'desc' },
+        skip: (paginacion.page - 1) * paginacion.limit,
+        take: paginacion.limit,
+      }),
+      this.prisma.usuario.count({ where }),
+    ]);
+
+    return { items: rows.map((row) => this.toDomain(row)), total };
   }
 
   private toDomain(row: UsuarioRow): Usuario {

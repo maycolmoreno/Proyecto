@@ -15,6 +15,8 @@ const auditarUsuarios = crearAuditMiddlewaresModeracion(container.auditoriaRepos
 
 // Fase 4, sección 3 (BC-Administración) — RF-018/CU-011, ADMINISTRADOR únicamente.
 router.get('/admin/reportes', authMiddleware, soloAdministrador, adminController.reportes);
+// Sprint F4 (frontend) — extensión post-cierre, ver docs/fases/fase-06-backend.md historial.
+router.get('/admin/usuarios', authMiddleware, soloAdministrador, adminController.listarUsuarios);
 router.patch(
   '/admin/donaciones/:id/moderar',
   authMiddleware,

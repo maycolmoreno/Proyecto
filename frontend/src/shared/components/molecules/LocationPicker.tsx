@@ -58,6 +58,10 @@ export function LocationPicker({ value, onChange }: LocationPickerProps): JSX.El
       <Button type="button" variant="secundario" onClick={usarMiUbicacion}>
         📍 Usar mi ubicación actual
       </Button>
+      <p className="location-picker__ayuda">
+        Esto solo agrega coordenadas GPS de referencia — provincia y ciudad siempre deben
+        completarse manualmente.
+      </p>
       {value.latitud && value.longitud ? <p>Coordenadas guardadas ✓</p> : null}
     </div>
   );

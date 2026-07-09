@@ -13,6 +13,11 @@ import { NuevaDonacionPage } from './pages/NuevaDonacionPage.js';
 import { SolicitudesPage } from './pages/SolicitudesPage.js';
 import { SolicitudDetallePage } from './pages/SolicitudDetallePage.js';
 import { NuevaSolicitudPage } from './pages/NuevaSolicitudPage.js';
+import { TruequesPage } from './pages/TruequesPage.js';
+import { TruequeDetallePage } from './pages/TruequeDetallePage.js';
+import { NuevaTruequePage } from './pages/NuevaTruequePage.js';
+import { ChatbotPage } from './pages/ChatbotPage.js';
+import { AdminPage } from './pages/AdminPage.js';
 
 // Routing + layout shell (Fase 1, sección 9.1). Login/Registro quedan fuera de AppShell (sin
 // Navbar/Sidebar de navegación completa). Chatbot/Mensajes/Perfil/Admin exigen sesión
@@ -31,17 +36,19 @@ export function App(): JSX.Element {
             <Route path="/donaciones/:id" element={<DonacionDetallePage />} />
             <Route path="/solicitudes" element={<SolicitudesPage />} />
             <Route path="/solicitudes/:id" element={<SolicitudDetallePage />} />
-            <Route path="/trueques" element={<PlaceholderPage titulo="Trueque" />} />
+            <Route path="/trueques" element={<TruequesPage />} />
+            <Route path="/trueques/:id" element={<TruequeDetallePage />} />
 
             <Route element={<RutaProtegida />}>
               <Route path="/donaciones/nueva" element={<NuevaDonacionPage />} />
               <Route path="/solicitudes/nueva" element={<NuevaSolicitudPage />} />
-              <Route path="/chatbot" element={<PlaceholderPage titulo="Chatbot IA" />} />
+              <Route path="/trueques/nuevo" element={<NuevaTruequePage />} />
+              <Route path="/chatbot" element={<ChatbotPage />} />
               <Route path="/conversaciones" element={<PlaceholderPage titulo="Mensajes" />} />
               <Route path="/perfil" element={<PerfilPage />} />
-              {/* /admin: protegido por sesión aquí; el guard de rol ADMINISTRADOR se agrega en
-                  el Sprint F4 junto con el contenido real del panel (Fase 5 sección 2.7, ADR-020). */}
-              <Route path="/admin" element={<PlaceholderPage titulo="Administración" />} />
+              {/* /admin: RutaProtegida solo exige sesión; el guard de rol ADMINISTRADOR vive
+                  dentro de AdminPage (Fase 5 sección 2.7, ADR-020). */}
+              <Route path="/admin" element={<AdminPage />} />
             </Route>
           </Route>
         </Routes>
