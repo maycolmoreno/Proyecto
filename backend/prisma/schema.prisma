@@ -1,6 +1,10 @@
 // Fase 3 — Modelo de Datos (docs/fases/fase-03-modelo-datos.md)
 // Se agregan tablas incrementalmente, en el orden del roadmap (docs/fases/fase-11-roadmap.md).
 // Sprint 0: usuarios + ubicaciones (BC-Identidad, Fase 2).
+// Sprint 1: categorias + donaciones + imagenes (BC-Categorías, BC-Donaciones, Fase 2).
+// Retrofit (RNF-006, Fase 9 sección 3): auditoria — pendiente desde Sprint 0, cerrado antes de Sprint 2.
+// Sprint 2: solicitudes + ofertas_solicitud + entregas (BC-Solicitudes, BC-Entregas, Fase 2).
+// Sprint 3: trueques + propuestas_trueque (BC-Trueques, Fase 2).
 
 generator client {
   provider = "prisma-client-js"
@@ -45,7 +49,13 @@ model Usuario {
   estado        EstadoUsuario @default(ACTIVO)
   fechaCreacion DateTime      @default(now()) @map("fecha_creacion") @db.Timestamptz
 
-  ubicaciones Ubicacion[]
+  ubicaciones             Ubicacion[]
+  donaciones              Donacion[]
+  registrosAuditoria      Auditoria[]
+  solicitudes             Solicitud[]
+  ofertasComoDonante      OfertaSolicitud[]
+  trueques                Trueque[]
+  propuestasComoProponente PropuestaTrueque[]
 
   @@index([rol])
   @@map("usuarios")
@@ -63,7 +73,269 @@ model Ubicacion {
   longitud    Decimal?      @db.Decimal(9, 6)
   tipo        TipoUbicacion
 
+  donacionesRetiro Donacion[]
+  solicitudes      Solicitud[]
+
   @@index([usuarioId, tipo])
   @@index([provincia, ciudad])
   @@map("ubicaciones")
+}
+
+enum EstadoCategoria {
+  ACTIVA
+  INACTIVA
+
+  @@map("estado_categoria")
+}
+
+enum EstadoObjeto {
+  NUEVO
+  BUEN_ESTADO
+  USADO
+  REQUIERE_REPARACION
+
+  @@map("estado_objeto")
+}
+
+enum EstadoDonacion {
+  PUBLICADA
+  SOLICITADA
+  APROBADA
+  EN_RETIRO
+  ENTREGADA
+  CANCELADA
+
+  @@map("estado_donacion")
+}
+
+enum TipoEntidadImagen {
+  DONACION
+  SOLICITUD
+  TRUEQUE
+
+  @@map("tipo_entidad_imagen")
+}
+
+model Categoria {
+  id     String          @id @default(uuid()) @map("id_categoria") @db.Uuid
+  nombre String          @db.VarChar(100)
+  tipo   String          @db.VarChar(50)
+  estado EstadoCategoria @default(ACTIVA)
+
+  donaciones  Donacion[]
+  solicitudes Solicitud[]
+  trueques    Trueque[]
+
+  @@unique([nombre, tipo])
+  @@map("categorias")
+}
+
+model Donacion {
+  id                String         @id @default(uuid()) @map("id_donacion") @db.Uuid
+  donanteId         String         @map("id_donante") @db.Uuid
+  donante           Usuario        @relation(fields: [donanteId], references: [id])
+  categoriaId       String         @map("id_categoria") @db.Uuid
+  categoria         Categoria      @relation(fields: [categoriaId], references: [id])
+  titulo            String         @db.VarChar(150)
+  descripcion       String         @db.Text
+  estadoObjeto      EstadoObjeto   @map("estado_objeto")
+  estadoDonacion    EstadoDonacion @default(PUBLICADA) @map("estado_donacion")
+  requiereRetiro    Boolean        @default(false) @map("requiere_retiro")
+  ubicacionRetiroId String?        @map("id_ubicacion_retiro") @db.Uuid
+  ubicacionRetiro   Ubicacion?     @relation(fields: [ubicacionRetiroId], references: [id])
+  fecha             DateTime       @default(now()) @db.Timestamptz
+
+  ofertas OfertaSolicitud[]
+
+  @@index([estadoDonacion])
+  @@index([categoriaId])
+  @@index([donanteId])
+  @@index([fecha(sort: Desc)])
+  @@map("donaciones")
+}
+
+model Imagen {
+  id          String            @id @default(uuid()) @map("id_imagen") @db.Uuid
+  tipoEntidad TipoEntidadImagen @map("tipo_entidad")
+  idEntidad   String            @map("id_entidad") @db.Uuid
+  url         String            @db.VarChar(500)
+  publicId    String            @map("public_id") @db.VarChar(255)
+  fecha       DateTime          @default(now()) @db.Timestamptz
+
+  @@index([tipoEntidad, idEntidad])
+  @@map("imagenes")
+}
+
+enum Urgencia {
+  BAJA
+  MEDIA
+  ALTA
+
+  @@map("urgencia")
+}
+
+enum EstadoSolicitud {
+  ABIERTA
+  EN_REVISION
+  ACEPTADA_POR_DONANTE
+  EN_ENTREGA
+  ATENDIDA
+  CANCELADA
+
+  @@map("estado_solicitud")
+}
+
+enum EstadoOferta {
+  PENDIENTE
+  ACEPTADA
+  RECHAZADA
+
+  @@map("estado_oferta")
+}
+
+enum TipoOperacionEntrega {
+  DONACION
+  TRUEQUE
+
+  @@map("tipo_operacion_entrega")
+}
+
+enum ModalidadEntrega {
+  RETIRO_DOMICILIO
+  ENTREGA_DIRECTA
+  PUNTO_ENCUENTRO
+
+  @@map("modalidad_entrega")
+}
+
+enum EstadoEntrega {
+  PROGRAMADA
+  CONFIRMADA
+  CANCELADA
+
+  @@map("estado_entrega")
+}
+
+model Solicitud {
+  id              String          @id @default(uuid()) @map("id_solicitud") @db.Uuid
+  beneficiarioId  String          @map("id_beneficiario") @db.Uuid
+  beneficiario    Usuario         @relation(fields: [beneficiarioId], references: [id])
+  categoriaId     String          @map("id_categoria") @db.Uuid
+  categoria       Categoria       @relation(fields: [categoriaId], references: [id])
+  titulo          String          @db.VarChar(150)
+  descripcion     String          @db.Text
+  urgencia        Urgencia
+  estadoSolicitud EstadoSolicitud @default(ABIERTA) @map("estado_solicitud")
+  ubicacionId     String          @map("id_ubicacion") @db.Uuid
+  ubicacion       Ubicacion       @relation(fields: [ubicacionId], references: [id])
+  evidenciaUrl    String?         @map("evidencia_url") @db.VarChar(500)
+  fecha           DateTime        @default(now()) @db.Timestamptz
+
+  ofertas OfertaSolicitud[]
+
+  @@index([estadoSolicitud])
+  @@index([categoriaId])
+  @@index([urgencia])
+  @@index([fecha(sort: Desc)])
+  @@map("solicitudes")
+}
+
+model OfertaSolicitud {
+  id          String       @id @default(uuid()) @map("id_oferta") @db.Uuid
+  solicitudId String       @map("id_solicitud") @db.Uuid
+  solicitud   Solicitud    @relation(fields: [solicitudId], references: [id])
+  donanteId   String       @map("id_donante") @db.Uuid
+  donante     Usuario      @relation(fields: [donanteId], references: [id])
+  donacionId  String       @map("id_donacion") @db.Uuid
+  donacion    Donacion     @relation(fields: [donacionId], references: [id])
+  mensaje     String?      @db.Text
+  estado      EstadoOferta @default(PENDIENTE)
+  fecha       DateTime     @default(now()) @db.Timestamptz
+
+  @@index([solicitudId])
+  @@map("ofertas_solicitud")
+}
+
+model Entrega {
+  id              String               @id @default(uuid()) @map("id_entrega") @db.Uuid
+  tipoOperacion   TipoOperacionEntrega @map("tipo_operacion")
+  idReferencia    String               @map("id_referencia") @db.Uuid
+  modalidad       ModalidadEntrega
+  estado          EstadoEntrega        @default(PROGRAMADA)
+  fechaProgramada DateTime?            @map("fecha_programada") @db.Timestamptz
+
+  @@index([tipoOperacion, idReferencia])
+  @@index([estado])
+  @@map("entregas")
+}
+
+enum EstadoTrueque {
+  PUBLICADO
+  PROPUESTA_RECIBIDA
+  ACEPTADO
+  EN_COORDINACION
+  INTERCAMBIADO
+  CANCELADO
+
+  @@map("estado_trueque")
+}
+
+enum EstadoPropuesta {
+  PENDIENTE
+  ACEPTADA
+  RECHAZADA
+
+  @@map("estado_propuesta")
+}
+
+model Trueque {
+  id            String        @id @default(uuid()) @map("id_trueque") @db.Uuid
+  usuarioId     String        @map("id_usuario") @db.Uuid
+  usuario       Usuario       @relation(fields: [usuarioId], references: [id])
+  categoriaId   String        @map("id_categoria") @db.Uuid
+  categoria     Categoria     @relation(fields: [categoriaId], references: [id])
+  titulo        String        @db.VarChar(150)
+  descripcion   String        @db.Text
+  estadoObjeto  EstadoObjeto  @map("estado_objeto")
+  estadoTrueque EstadoTrueque @default(PUBLICADO) @map("estado_trueque")
+  fecha         DateTime      @default(now()) @db.Timestamptz
+
+  propuestasComoOrigen   PropuestaTrueque[] @relation("PropuestasComoOrigen")
+  propuestasComoOfrecido PropuestaTrueque[] @relation("PropuestasComoOfrecido")
+
+  @@index([estadoTrueque])
+  @@index([categoriaId])
+  @@index([fecha(sort: Desc)])
+  @@map("trueques")
+}
+
+model PropuestaTrueque {
+  id                   String          @id @default(uuid()) @map("id_propuesta") @db.Uuid
+  truequeOrigenId      String          @map("id_trueque_origen") @db.Uuid
+  truequeOrigen        Trueque         @relation("PropuestasComoOrigen", fields: [truequeOrigenId], references: [id])
+  truequeOfrecidoId    String          @map("id_trueque_ofrecido") @db.Uuid
+  truequeOfrecido      Trueque         @relation("PropuestasComoOfrecido", fields: [truequeOfrecidoId], references: [id])
+  usuarioProponenteId  String          @map("id_usuario_proponente") @db.Uuid
+  usuarioProponente    Usuario         @relation(fields: [usuarioProponenteId], references: [id])
+  estado               EstadoPropuesta @default(PENDIENTE)
+  fecha                DateTime        @default(now()) @db.Timestamptz
+
+  @@index([truequeOrigenId])
+  @@map("propuestas_trueque")
+}
+
+model Auditoria {
+  id        String   @id @default(uuid()) @map("id_auditoria") @db.Uuid
+  usuarioId String?  @map("id_usuario") @db.Uuid
+  usuario   Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  accion    String   @db.VarChar(50)
+  entidad   String   @db.VarChar(50)
+  idEntidad String   @map("id_entidad") @db.Uuid
+  detalle   Json?
+  fecha     DateTime @default(now()) @db.Timestamptz
+
+  @@index([entidad, idEntidad])
+  @@index([fecha(sort: Desc)])
+  @@index([usuarioId])
+  @@map("auditoria")
 }

@@ -29,7 +29,19 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+export interface MetaPaginacion {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface RespuestaPaginada<T> {
+  data: T[];
+  meta: MetaPaginacion;
+}
+
+async function fetchApi(path: string, init: RequestInit = {}): Promise<Response> {
   const token = obtenerToken();
   const headers = new Headers(init.headers);
   headers.set('Content-Type', 'application/json');
@@ -48,6 +60,12 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     );
   }
 
+  return response;
+}
+
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const response = await fetchApi(path, init);
+
   if (response.status === 204) {
     return undefined as T;
   }
@@ -56,8 +74,16 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return body.data;
 }
 
+// Listados paginados (Fase 4, ADR-018: envelope {data, meta}) — a diferencia de `request`, no
+// descarta `meta` (page/limit/total/totalPages), necesario para renderizar paginación.
+async function requestPaginado<T>(path: string): Promise<RespuestaPaginada<T>> {
+  const response = await fetchApi(path, { method: 'GET' });
+  return (await response.json()) as RespuestaPaginada<T>;
+}
+
 export const httpClient = {
   get: <T>(path: string) => request<T>(path, { method: 'GET' }),
+  getPaginado: <T>(path: string) => requestPaginado<T>(path),
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined }),
   patch: <T>(path: string, body?: unknown) =>

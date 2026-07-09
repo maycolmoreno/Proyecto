@@ -18,3 +18,19 @@ export function crearAuthMiddleware(tokenService: ITokenService) {
     }
   };
 }
+
+/** Igual que authMiddleware pero no rechaza requests sin token — los endpoints públicos con reglas
+ * de visibilidad según el solicitante (ej. ADR-019) lo usan para saber si hay un usuario autenticado. */
+export function crearAuthOpcionalMiddleware(tokenService: ITokenService) {
+  return function authOpcionalMiddleware(req: Request, _res: Response, next: NextFunction): void {
+    const header = req.headers.authorization;
+    if (header?.startsWith('Bearer ')) {
+      try {
+        req.usuario = tokenService.verificar(header.slice('Bearer '.length));
+      } catch {
+        // Token inválido en un endpoint público: se ignora, se sirve como anónimo.
+      }
+    }
+    next();
+  };
+}

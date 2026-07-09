@@ -5,7 +5,7 @@ export function RegistroPage(): JSX.Element {
   const navigate = useNavigate();
 
   return (
-    <main>
+    <main className="pagina-angosta">
       <h1>Crear cuenta</h1>
       <RegistroForm onExito={() => navigate('/login')} />
     </main>

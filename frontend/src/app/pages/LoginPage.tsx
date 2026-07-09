@@ -5,7 +5,7 @@ export function LoginPage(): JSX.Element {
   const navigate = useNavigate();
 
   return (
-    <main>
+    <main className="pagina-angosta">
       <h1>Iniciar sesión</h1>
       <LoginForm onExito={() => navigate('/')} />
     </main>

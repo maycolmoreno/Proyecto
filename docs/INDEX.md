@@ -12,6 +12,7 @@
 
 ## Otros documentos
 - [`DECISIONES.md`](DECISIONES.md) — log de decisiones de arquitectura (ADR-lite), incluye correcciones a inconsistencias del SRS.
+- [`PLAN_IMPLEMENTACION.md`](PLAN_IMPLEMENTACION.md) — tracker vivo de ejecución del backend (Sprint 2 en adelante), desglosado capa por capa para no saltarse pasos. Distinto de `fases/` (que es diseño ya congelado): este se actualiza con checkboxes a medida que se construye.
 
 ## Estado de las fases
 

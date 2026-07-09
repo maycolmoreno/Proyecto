@@ -1,18 +1,15 @@
 import type { Request, Response, NextFunction } from 'express';
-import type { IUsuarioRepository } from '@domain/identidad/ports/IUsuarioRepository.js';
+import type { ObtenerPerfilUseCase } from '@application/identidad/use-cases/ObtenerPerfilUseCase.js';
 
+/** Adaptador de entrada (Hexagonal) — traduce HTTP a invocaciones de caso de uso. Sin lógica de negocio. */
 export class UsuariosController {
-  constructor(private readonly usuarioRepository: IUsuarioRepository) {}
+  constructor(private readonly obtenerPerfil: ObtenerPerfilUseCase) {}
 
   /** GET /usuarios/me — requiere authMiddleware (req.usuario ya validado). */
   me = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const usuario = await this.usuarioRepository.buscarPorId(req.usuario!.sub);
-      if (!usuario) {
-        res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Usuario no encontrado.' } });
-        return;
-      }
-      res.status(200).json({ data: usuario.toJSON() });
+      const perfil = await this.obtenerPerfil.ejecutar(req.usuario!.sub);
+      res.status(200).json({ data: perfil });
     } catch (error) {
       next(error);
     }

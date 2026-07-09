@@ -2,7 +2,7 @@
 
 **Estado:** ✅ Aprobada
 **Fecha de creación:** 2026-07-07
-**Última actualización:** 2026-07-07
+**Última actualización:** 2026-07-08
 **Fuente:** `SRS_DonaConnect_Ecuador_ISO29148.docx` (§2.5, §3.2.2, §5.2, RNF-004/005/006) + Fases 1, 3, 4, 6, 8 + `docs/DECISIONES.md`
 
 ## Historial de cambios
@@ -10,6 +10,7 @@
 |---|---|
 | 2026-07-07 | Versión inicial. Consolida las decisiones de seguridad ya tomadas en fases previas (RBAC/ADR-016, auditoría/Fase 3, HTTPS/ADR-006, exposición de ubicación/ADR-019) y cierra lo que faltaba: parámetros concretos de JWT, mapeo completo a OWASP Top 10 2021, y rate limiting por endpoint. |
 | 2026-07-07 | Aprobada por el usuario sin cambios. Se avanza a Fase 10. |
+| 2026-07-08 | Implementación del retrofit de auditoría (sección 3): se resuelve un caso no explícito en el diseño original — `LOGIN_FALLIDO` con un correo que **no existe** en el sistema no se audita, porque no hay `id_entidad` válido que referenciar (la tabla `auditoria`, Fase 3, exige `id_entidad NOT NULL`). Solo se audita cuando el correo existe y la contraseña es incorrecta (hay un `id_usuario` real que referenciar). Además, `ownershipMiddleware` (sección 2) **no se implementó como middleware genérico separado** — la verificación de dueño vive dentro de cada caso de uso (ya documentado en el historial de Fase 6, Sprint 1). |
 
 ---
 

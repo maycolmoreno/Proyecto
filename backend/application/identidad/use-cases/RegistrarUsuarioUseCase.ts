@@ -3,6 +3,7 @@ import { Usuario } from '@domain/identidad/entities/Usuario.js';
 import type { IUsuarioRepository } from '@domain/identidad/ports/IUsuarioRepository.js';
 import type { IPasswordHasher } from '@domain/identidad/ports/IPasswordHasher.js';
 import type { Rol } from '@domain/identidad/value-objects/Rol.js';
+import type { IEventBus } from '@domain/eventos/ports/IEventBus.js';
 
 export interface RegistrarUsuarioInput {
   nombre: string;
@@ -24,6 +25,7 @@ export class RegistrarUsuarioUseCase {
   constructor(
     private readonly usuarioRepository: IUsuarioRepository,
     private readonly passwordHasher: IPasswordHasher,
+    private readonly eventBus: IEventBus,
   ) {}
 
   async ejecutar(input: RegistrarUsuarioInput): Promise<Usuario> {
@@ -45,8 +47,7 @@ export class RegistrarUsuarioUseCase {
 
     await this.usuarioRepository.crear(usuario);
 
-    // TODO(Sprint 1): publicar UsuarioRegistrado vía IEventPublisher cuando exista
-    // el primer listener real (NotificacionDispatchService, Fase 6 sección 5).
+    this.eventBus.emit('UsuarioRegistrado', { id: usuario.id, nombre: usuario.nombre });
 
     return usuario;
   }

@@ -22,6 +22,13 @@ export interface UsuarioPublico {
   fechaCreacion: Date;
 }
 
+export class UsuarioYaEliminadoError extends Error {
+  constructor() {
+    super('El usuario ya fue eliminado; no admite más cambios de estado.');
+    this.name = 'UsuarioYaEliminadoError';
+  }
+}
+
 /** Aggregate Root — Fase 2 (BC-Identidad). Sin dependencias de framework (Clean Architecture, capa Entities). */
 export class Usuario {
   private constructor(private readonly props: UsuarioProps) {}
@@ -80,6 +87,22 @@ export class Usuario {
 
   estaActivo(): boolean {
     return this.props.estado === 'ACTIVO';
+  }
+
+  /** BC-Administración — ModeracionService (Fase 2, sección 6; RF-018/CU-011). ELIMINADO es terminal. */
+  activar(): void {
+    if (this.props.estado === 'ELIMINADO') throw new UsuarioYaEliminadoError();
+    this.props.estado = 'ACTIVO';
+  }
+
+  suspender(): void {
+    if (this.props.estado === 'ELIMINADO') throw new UsuarioYaEliminadoError();
+    this.props.estado = 'SUSPENDIDO';
+  }
+
+  eliminar(): void {
+    if (this.props.estado === 'ELIMINADO') throw new UsuarioYaEliminadoError();
+    this.props.estado = 'ELIMINADO';
   }
 
   /** Nunca incluye passwordHash — regla de seguridad, Fase 9. */

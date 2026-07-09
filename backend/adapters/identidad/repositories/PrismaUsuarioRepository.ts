@@ -23,6 +23,13 @@ export class PrismaUsuarioRepository implements IUsuarioRepository {
     });
   }
 
+  async actualizar(usuario: Usuario): Promise<void> {
+    await this.prisma.usuario.update({
+      where: { id: usuario.id },
+      data: { estado: usuario.estado },
+    });
+  }
+
   async buscarPorCorreo(correo: string): Promise<Usuario | null> {
     const row = await this.prisma.usuario.findUnique({ where: { correo } });
     return row ? this.toDomain(row) : null;
@@ -31,6 +38,11 @@ export class PrismaUsuarioRepository implements IUsuarioRepository {
   async buscarPorId(id: string): Promise<Usuario | null> {
     const row = await this.prisma.usuario.findUnique({ where: { id } });
     return row ? this.toDomain(row) : null;
+  }
+
+  async listarPorRol(rol: Rol): Promise<Usuario[]> {
+    const rows = await this.prisma.usuario.findMany({ where: { rol } });
+    return rows.map((row) => this.toDomain(row));
   }
 
   private toDomain(row: UsuarioRow): Usuario {

@@ -2,7 +2,7 @@
 
 **Estado:** ✅ Aprobada
 **Fecha de creación:** 2026-07-07
-**Última actualización:** 2026-07-07
+**Última actualización:** 2026-07-08
 **Fuente:** `SRS_DonaConnect_Ecuador_ISO29148.docx` (RF-001 a RF-020, IF-001 a IF-008) + Fases 0-3 + `docs/DECISIONES.md`
 
 ## Historial de cambios
@@ -10,6 +10,8 @@
 |---|---|
 | 2026-07-07 | Versión inicial. Catálogo completo de endpoints REST, DTOs, validaciones, versionado, manejo de errores, matriz RBAC estricta (confirmada por el usuario, ADR-016), paginación y filtros. |
 | 2026-07-07 | Aprobada por el usuario sin cambios. Se avanza a Fase 5. |
+| 2026-07-08 | Implementación de Sprint 1 (BC-Donaciones): se agrega `503 SERVICE_UNAVAILABLE` a la tabla de errores (sección 6), no contemplado en la versión original, para el caso en que `POST /donaciones/:id/imagenes/firma` se invoca sin credenciales Cloudinary configuradas — distingue un problema de configuración del servidor (RNF-002, integraciones externas) de un `500 INTERNAL_ERROR` genérico. |
+| 2026-07-08 | Implementación de Sprint 3 (BC-Trueques): se agregan `POST /trueques/:id/imagenes/firma` y `POST /trueques/:id/imagenes` a la sección 3, ausentes del catálogo original de esta fase (que solo los listaba para BC-Donaciones). Se completan por analogía porque Fase 2 sección 3 declara CU-004 "Subir fotografías" como transversal a Donaciones/Solicitudes/Trueques, y Fase 3 ya modela `imagenes.tipo_entidad` incluyendo `TRUEQUE` desde su versión inicial — es un gap-fill del catálogo, no una funcionalidad nueva. |
 
 ---
 
@@ -91,6 +93,8 @@ Modelo **estricto y segregado**: el rol declarado al registrarse determina exact
 | GET | `/trueques` | Listado, filtros | Público |
 | GET | `/trueques/:id` | Detalle | Público |
 | PATCH | `/trueques/:id` | Editar/cancelar | Dueño |
+| POST | `/trueques/:id/imagenes/firma` | RF-006 / CU-004 (firma Cloudinary, ADR-009) — gap-fill Sprint 3 | Dueño |
+| POST | `/trueques/:id/imagenes` | RF-006 / CU-004 (registrar URL tras subida) — gap-fill Sprint 3 | Dueño |
 | POST | `/trueques/:id/propuestas` | RF-012 / CU-008 | DONANTE, USUARIO_COMUNIDAD (dueño del trueque ofrecido) |
 | PATCH | `/trueques/:id/propuestas/:propuestaId` | RF-013 (aceptar/rechazar — bilateral) | Dueño del trueque origen |
 
@@ -191,6 +195,7 @@ Reglas generales aplicadas en middleware antes de llegar al controller:
 | 409 | `CONFLICT` | Ej. intentar aceptar una oferta cuando ya existe una activa (choca con el índice único parcial de Fase 3) |
 | 422 | `UNPROCESSABLE` | Regla de negocio violada (ej. proponer trueque a un objeto propio) |
 | 500 | `INTERNAL_ERROR` | Error no controlado |
+| 503 | `SERVICE_UNAVAILABLE` | Integración externa requerida para el flujo no está configurada (ej. Cloudinary sin credenciales) |
 
 Todos los mensajes (`error.message`) se redactan en español, claros y accionables (RNF-015, consolidado en Fase 1/ADR-003).
 

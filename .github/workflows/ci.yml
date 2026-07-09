@@ -21,6 +21,51 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
 
+  backend-test:
+    # Fase 6, sección 9 (RNF-009) + Fase 10, sección 3 (ADR-036) — pruebas de integración de los
+    # flujos core contra Postgres/MongoDB reales (mismas versiones que docker-compose.yml).
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:18.3-alpine
+        env:
+          POSTGRES_USER: donaconnect
+          POSTGRES_PASSWORD: donaconnect
+          POSTGRES_DB: donaconnect
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U donaconnect"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      mongo:
+        image: mongo:8.3.4
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand(\"ping\")'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      JWT_SECRET: ci-test-secret-not-for-production
+      DB_POSTGRES_URL: postgresql://donaconnect:donaconnect@localhost:5432/donaconnect
+      MONGODB_URI: mongodb://localhost:27017/donaconnect
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npx prisma generate
+      - run: npm run prisma:deploy
+      - run: npm test
+
   frontend:
     runs-on: ubuntu-latest
     defaults:
