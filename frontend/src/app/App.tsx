@@ -6,7 +6,6 @@ import { HomePage } from './pages/HomePage.js';
 import { LoginPage } from './pages/LoginPage.js';
 import { RegistroPage } from './pages/RegistroPage.js';
 import { PerfilPage } from './pages/PerfilPage.js';
-import { PlaceholderPage } from './pages/PlaceholderPage.js';
 import { DonacionesPage } from './pages/DonacionesPage.js';
 import { DonacionDetallePage } from './pages/DonacionDetallePage.js';
 import { NuevaDonacionPage } from './pages/NuevaDonacionPage.js';
@@ -18,6 +17,7 @@ import { TruequeDetallePage } from './pages/TruequeDetallePage.js';
 import { NuevaTruequePage } from './pages/NuevaTruequePage.js';
 import { ChatbotPage } from './pages/ChatbotPage.js';
 import { AdminPage } from './pages/AdminPage.js';
+import { ConversacionesPage } from './pages/ConversacionesPage.js';
 
 // Routing + layout shell (Fase 1, sección 9.1). Login/Registro quedan fuera de AppShell (sin
 // Navbar/Sidebar de navegación completa). Chatbot/Mensajes/Perfil/Admin exigen sesión
@@ -44,7 +44,8 @@ export function App(): JSX.Element {
               <Route path="/solicitudes/nueva" element={<NuevaSolicitudPage />} />
               <Route path="/trueques/nuevo" element={<NuevaTruequePage />} />
               <Route path="/chatbot" element={<ChatbotPage />} />
-              <Route path="/conversaciones" element={<PlaceholderPage titulo="Mensajes" />} />
+              <Route path="/conversaciones" element={<ConversacionesPage />} />
+              <Route path="/conversaciones/:id" element={<ConversacionesPage />} />
               <Route path="/perfil" element={<PerfilPage />} />
               {/* /admin: RutaProtegida solo exige sesión; el guard de rol ADMINISTRADOR vive
                   dentro de AdminPage (Fase 5 sección 2.7, ADR-020). */}

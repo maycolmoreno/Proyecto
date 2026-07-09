@@ -12,9 +12,11 @@ interface NavbarUsuario {
 interface NavbarProps {
   usuario?: NavbarUsuario | null;
   onCerrarSesion?: () => void;
+  contadorNotificaciones?: number;
+  onClickCampana?: () => void;
 }
 
-export function Navbar({ usuario, onCerrarSesion }: NavbarProps): JSX.Element {
+export function Navbar({ usuario, onCerrarSesion, contadorNotificaciones, onClickCampana }: NavbarProps): JSX.Element {
   return (
     <header className="shell__navbar">
       <Link to="/" className="shell__navbar-marca">
@@ -23,8 +25,13 @@ export function Navbar({ usuario, onCerrarSesion }: NavbarProps): JSX.Element {
       <div className="shell__navbar-acciones">
         {usuario ? (
           <>
-            <span aria-hidden="true">🔔</span>
-            <span aria-hidden="true">💬</span>
+            <button type="button" className="navbar__icono-boton" onClick={onClickCampana} aria-label="Notificaciones">
+              🔔
+              {contadorNotificaciones ? <span className="badge-contador">{contadorNotificaciones}</span> : null}
+            </button>
+            <Link to="/conversaciones" aria-label="Mensajes">
+              💬
+            </Link>
             <Avatar nombre={usuario.nombre} />
             <Button variant="secundario" onClick={onCerrarSesion}>
               Salir

@@ -8,6 +8,7 @@ import { JwtTokenService } from '@adapters/identidad/security/JwtTokenService.js
 import { RegistrarUsuarioUseCase } from '@application/identidad/use-cases/RegistrarUsuarioUseCase.js';
 import { IniciarSesionUseCase } from '@application/identidad/use-cases/IniciarSesionUseCase.js';
 import { ObtenerPerfilUseCase } from '@application/identidad/use-cases/ObtenerPerfilUseCase.js';
+import { ObtenerUsuarioPublicoUseCase } from '@application/identidad/use-cases/ObtenerUsuarioPublicoUseCase.js';
 import { AuthController } from '@adapters/identidad/controllers/auth.controller.js';
 import { UsuariosController } from '@adapters/identidad/controllers/usuarios.controller.js';
 
@@ -120,9 +121,10 @@ const iniciarSesionUseCase = new IniciarSesionUseCase(
   auditoriaRepository,
 );
 const obtenerPerfilUseCase = new ObtenerPerfilUseCase(usuarioRepository);
+const obtenerUsuarioPublicoUseCase = new ObtenerUsuarioPublicoUseCase(usuarioRepository);
 
 export const authController = new AuthController(registrarUsuarioUseCase, iniciarSesionUseCase);
-export const usuariosController = new UsuariosController(obtenerPerfilUseCase);
+export const usuariosController = new UsuariosController(obtenerPerfilUseCase, obtenerUsuarioPublicoUseCase);
 
 // BC-Categorías (Shared Kernel)
 const categoriaRepository = new PrismaCategoriaRepository(prisma);

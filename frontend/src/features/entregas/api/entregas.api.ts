@@ -4,6 +4,7 @@ import type { Entrega } from '../types/index.js';
 export interface ActualizarEntregaInput {
   confirmar?: true;
   cancelar?: true;
+  fechaProgramada?: string;
 }
 
 // Cliente API del módulo (Fase 1, sección 9.1). No hay POST /entregas público — se crean

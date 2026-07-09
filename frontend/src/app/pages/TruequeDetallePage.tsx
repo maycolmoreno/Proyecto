@@ -59,6 +59,7 @@ export function TruequeDetallePage(): JSX.Element {
   const esLadoOfrecido =
     (trueque.data.estadoTrueque === 'EN_COORDINACION' || trueque.data.estadoTrueque === 'INTERCAMBIADO') &&
     !trueque.data.propuestasRecibidas.some((p) => p.estado === 'ACEPTADA');
+  const propuestaAceptada = trueque.data.propuestasRecibidas.find((p) => p.estado === 'ACEPTADA');
 
   async function confirmarCancelacion(): Promise<void> {
     try {
@@ -177,12 +178,16 @@ export function TruequeDetallePage(): JSX.Element {
         </div>
       ) : null}
 
-      {!esDueño && !puedeProponer && !miPropuestaActiva ? (
-        // Enviar mensaje al publicador (Fase 5 sección 2.5) se conecta en el Sprint F5 (Mensajería).
-        <p>💬 Enviar mensaje al publicador — disponible en un sprint próximo.</p>
+      {!esDueño && !puedeProponer && !miPropuestaActiva && sesion.data ? (
+        <p>
+          <Link to={`/conversaciones/${trueque.data.usuarioId}`}>💬 Enviar mensaje al publicador</Link>
+        </p>
       ) : null}
 
-      <CoordinacionEntrega idReferencia={trueque.data.id} />
+      <CoordinacionEntrega
+        idReferencia={trueque.data.id}
+        otroParticipanteId={esDueño ? propuestaAceptada?.usuarioProponenteId : trueque.data.usuarioId}
+      />
       <MatchesSugeridos entidadTipo="TRUEQUE" entidadId={trueque.data.id} />
       {esLadoOfrecido ? (
         <p className="estado-lista">

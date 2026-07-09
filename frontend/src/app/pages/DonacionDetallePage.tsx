@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { StatusBadge } from '@shared/components/atoms/StatusBadge';
 import { Button } from '@shared/components/atoms/Button';
 import { Modal } from '@shared/components/organisms/Modal';
@@ -62,12 +62,16 @@ export function DonacionDetallePage(): JSX.Element {
             Cancelar donación
           </Button>
         </>
-      ) : (
-        // Enviar mensaje al publicador (Fase 5 sección 2.5) se conecta en el Sprint F5 (Mensajería).
-        <p>💬 Enviar mensaje al publicador — disponible en un sprint próximo.</p>
-      )}
+      ) : sesion.data ? (
+        <p>
+          <Link to={`/conversaciones/${donacion.data.donanteId}`}>💬 Enviar mensaje al publicador</Link>
+        </p>
+      ) : null}
 
-      <CoordinacionEntrega idReferencia={donacion.data.id} />
+      {/* otroParticipanteId solo se conoce desde la perspectiva de quien NO es dueño (el donante es
+          siempre la contraparte válida); desde el propio donante no hay forma de resolver quién
+          aceptó sin una consulta adicional — se omite el enlace de mensaje en ese caso. */}
+      <CoordinacionEntrega idReferencia={donacion.data.id} otroParticipanteId={esDueño ? undefined : donacion.data.donanteId} />
       <MatchesSugeridos entidadTipo="DONACION" entidadId={donacion.data.id} />
 
       {modalCancelarAbierto ? (

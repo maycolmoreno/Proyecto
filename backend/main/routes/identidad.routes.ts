@@ -11,5 +11,8 @@ const auditarRegistro = crearAuditMiddleware(container.auditoriaRepository, 'CRE
 router.post('/auth/registro', auditarRegistro, authController.registro);
 router.post('/auth/login', authController.login);
 router.get('/usuarios/me', authMiddleware, usuariosController.me);
+// Extensión post-cierre (Sprint F5 frontend) — declarada después de /usuarios/me (Express resuelve
+// por orden; :id capturaría "me" si fuera declarada antes, mismo criterio que entregas.routes.ts).
+router.get('/usuarios/:id', authMiddleware, usuariosController.obtenerPorId);
 
 export { router as identidadRouter };

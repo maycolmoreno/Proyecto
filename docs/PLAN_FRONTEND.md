@@ -37,7 +37,7 @@
 | F2 | Solicitudes + Ofertas + Entregas | ✅ Código cerrado (2026-07-08) — ⚠️ pendiente de confirmación visual |
 | F3 | Trueques + Propuestas | ✅ Código cerrado (2026-07-09) — verificado end-to-end contra la API real; ⚠️ pendiente de confirmación visual en navegador |
 | F4 | IA (chatbot + sugerencias) + Administración | ✅ Código cerrado (2026-07-09) — verificado end-to-end contra la API real (incluye extensión de backend GET /admin/usuarios); ⚠️ pendiente de confirmación visual en navegador |
-| F5 | Mensajería + Notificaciones + Dashboard + QA final | ⏳ Pendiente |
+| F5 | Mensajería + Notificaciones + Dashboard + QA final | ✅ Código cerrado (2026-07-09) — verificado end-to-end contra la API real (incluye extensión de backend GET /usuarios/:id); ⚠️ pendiente de confirmación visual en navegador |
 
 ---
 
@@ -190,34 +190,36 @@
 
 ---
 
-## Sprint F5 — Mensajería + Notificaciones + Dashboard + QA final
+## Sprint F5 — Mensajería + Notificaciones + Dashboard + QA final ✅ Código cerrado (2026-07-09)
 
-**DoD:** enviar/leer mensajes, ver notificaciones, Inicio muestra KPIs reales, responsive verificado en los 5 breakpoints de Fase 5 sección 5.
+**DoD:** enviar/leer mensajes, ver notificaciones, Inicio muestra KPIs reales, responsive verificado en los 5 breakpoints de Fase 5 sección 5. **Cumplido y verificado end-to-end contra la API real** (ver detalle abajo); responsive/breakpoints queda como verificación visual pendiente (no automatizable sin navegador).
 
-**⚠️ Decisión pendiente de este sprint (originada en F3, 2026-07-09):** el modelo `Entrega` no tiene ningún campo de "lugar de encuentro" — solo `modalidad` (`RETIRO_DOMICILIO`/`ENTREGA_DIRECTA`) y `fechaProgramada` (existe en el dominio pero aún no se expone en `CoordinacionEntrega.tsx`, ni siquiera un input de fecha). Esto afecta a Trueques (siempre `ENTREGA_DIRECTA`, `ResponderPropuestaUseCase` fuerza `requiereRetiro: false`) y a Donación/Solicitud cuando no se requiere retiro. El diseño original (Fase 6, historial) asumía que ambas partes coordinarían lugar/hora por Mensajería — decisión confirmada explícitamente con el usuario (no agregar un campo de ubicación a `Entrega` por ahora). Al construir `ConversationThread.tsx`, considerar: (1) exponer `fechaProgramada` con un input en `CoordinacionEntrega`, (2) enlazar "Enviar mensaje" directamente desde `CoordinacionEntrega` cuando `modalidad=ENTREGA_DIRECTA`, para que coordinar el punto de encuentro sea el flujo natural.
+**⚠️ Extensión de backend real, no anticipada por el plan:** no existía ninguna forma de resolver el *nombre* de otro usuario — solo `GET /usuarios/me` (perfil propio) y `GET /admin/usuarios` (ADMINISTRADOR, Sprint F4). Sin esto, la lista de conversaciones y "Enviar mensaje al publicador" solo podían mostrar un ID crudo. Confirmado con el usuario antes de construir (mismo criterio que las extensiones de F2/F4): se agregó `GET /usuarios/:id`, deliberadamente mínimo — devuelve solo `{id, nombre}`, nunca correo/teléfono/rol/estado, para no exponer datos sensibles a cualquier autenticado que consulte a un desconocido. Nueva `ObtenerUsuarioPublicoUseCase` (application/identidad, reutiliza `UsuarioNoEncontradoError` de `ObtenerPerfilUseCase`), `UsuariosController.obtenerPorId`, ruta declarada **después** de `/usuarios/me` (mismo motivo que `entregas.routes.ts` en F2 — Express por orden de declaración). Verificado con curl: 200 con `{id,nombre}` real, 404 para id inexistente, `/usuarios/me` sigue funcionando sin cambios.
 
 **`features/mensajeria/`:**
-- [ ] `types/`, `api/mensajeria.api.ts` (listar conversaciones, listar/enviar mensajes — recordar: `:id` de ruta es el otro participante, no un id de conversación, ver `fase-06-backend.md` historial Sprint 5)
-- [ ] `hooks/useConversaciones`, `useConversacion`, `useEnviarMensaje`
-- [ ] `components/ConversationThread.tsx` (organismo específico) + botón "Enviar mensaje al publicador" en el detalle de cada publicación (Fase 5 sección 2.5)
-- [ ] `app/pages/ConversacionesPage.tsx`
+- [x] `types/index.ts`, `api/mensajeria.api.ts` (listar conversaciones, listar/enviar mensajes — `:id` de ruta es el OTRO participante, no un id de conversación; un 404 de `listarMensajes` es "aún no hay conversación", traducido a `null` como en `entregasApi.obtenerPorReferencia`, F2)
+- [x] `hooks/useConversaciones`, `useConversacion`, `useEnviarMensaje`
+- [x] `components/ConversationThread.tsx` (organismo específico, reutiliza el patrón de buffer "pendiente" de `ChatWidget` para evitar jank) + `features/identidad/hooks/useUsuarioPublico.ts` (nuevo, consume la extensión de arriba) para resolver el nombre del otro participante
+- [x] "Enviar mensaje al publicador" real (antes placeholder "disponible en un sprint próximo") en `DonacionDetallePage`/`SolicitudDetallePage`/`TruequeDetallePage`, gateado a `sesion.data` (visible solo logueado)
+- [x] `app/pages/ConversacionesPage.tsx` — layout lista+hilo, responsive (columna en mobile, dos columnas ≥768px)
+- [x] **Decisión F3 resuelta:** `CoordinacionEntrega` ahora expone `fechaProgramada` (input `datetime-local`, ya existía en el dominio pero no en la UI) y un enlace "💬 Coordinar por mensaje" vía nuevo prop opcional `otroParticipanteId` — opcional porque no siempre es resoluble sin ambigüedad (ej. el donante de una Donación no puede saber quién aceptó sin una consulta adicional; documentado inline en cada Detalle page qué lado sí puede resolverlo y cuál no).
 
 **`features/notificaciones/`:**
-- [ ] `types/`, `api/notificaciones.api.ts` (listar, marcar leído)
-- [ ] `hooks/useNotificaciones`, `useMarcarLeido`
-- [ ] Ícono de campana en `Navbar` con contador de no leídas + panel desplegable
+- [x] `types/index.ts`, `api/notificaciones.api.ts` (listar, marcar leído)
+- [x] `hooks/useNotificaciones` (polling 30s, sin WebSockets en el proyecto; `enabled` para no golpear el endpoint sin sesión), `useMarcarLeido`
+- [x] Campana en `Navbar` con contador de no leídas + `PanelNotificaciones` (organismo de `features/notificaciones`, montado por `AppShell` — mismo criterio de composition root que `ChatWidget`) — `Navbar` se mantiene puramente presentacional (recibe `contadorNotificaciones`/`onClickCampana` por props, no importa `features/*`)
 
 **`features/dashboard/`:**
-- [ ] `types/`, `api/dashboard.api.ts` (`GET /dashboard/impacto`)
-- [ ] `hooks/useDashboard`
-- [ ] `components/DashboardStatTile.tsx` (organismo específico) — tarjetas de KPI integradas en `HomePage` (Fase 5 sección 2.2, no un ítem de nav aparte — ADR-020), incluye "objetos reutilizados" como indicador ODS 12
+- [x] `types/index.ts`, `api/dashboard.api.ts` (`GET /dashboard/impacto`)
+- [x] `hooks/useDashboard`
+- [x] `components/DashboardStatTile.tsx` (organismo específico) — 4 tarjetas integradas en `HomePage` (Fase 5 sección 2.2, sin ítem de nav aparte, ADR-020): objetos reutilizados (ODS 12, derivado client-side de `donaciones.entregadas + trueques.intercambiados` — no es un campo propio del backend), donaciones publicadas, solicitudes atendidas, trueques intercambiados
 
-**QA / Cierre:**
-- [ ] Verificar los 5 breakpoints de Fase 5 sección 5 en cada pantalla nueva (mobile pequeño/grande, tablet, desktop, desktop ancho)
-- [ ] Verificar estados `loading`/`empty`/`error` en cada listado (no solo `success` — Fase 5 sección 4.1)
-- [ ] Accesibilidad: objetivo táctil ≥44×44px, `StatusBadge` nunca solo color, labels visibles siempre (RNF-008)
-- [ ] Confirmar `docker compose up web` sin intervención manual (ya debería funcionar — verificar igual que se hizo con `api` en el backend)
-- [ ] Decidir si se agrega testing automatizado de frontend (Vitest + Testing Library) o se documenta como fuera de alcance del MVP académico
+**Verificación:**
+- [x] Backend: `npm run typecheck && npm run lint` limpios tras la extensión de `/usuarios/:id`; contenedor `api` reiniciado y probado (nota operativa: Docker Desktop se cerró solo a mitad de sesión — reiniciado manualmente, los 5 contenedores volvieron arriba automáticamente).
+- [x] Frontend: `npm run typecheck && npm run lint && npm run build` limpios; contenedor `web` reiniciado.
+- [x] End-to-end contra la API real (curl): enviar mensaje (crea conversación implícita), listar conversaciones, obtener hilo con un participante (200) y con uno sin conversación previa (404 correcto), listar notificaciones, marcar leída (204, confirmado con GET posterior), `GET /dashboard/impacto` con conteos reales no triviales (13 donaciones publicadas, 2 trueques intercambiados, etc.).
+- [ ] **Verificación visual — pendiente de confirmación del usuario en navegador** (incluye los 5 breakpoints de Fase 5 sección 5, estados loading/empty/error, accesibilidad táctil ≥44×44px — no verificables sin navegador real).
+- [ ] Testing automatizado de frontend (Vitest + Testing Library): **no agregado** — se documenta como fuera de alcance del MVP académico, mismo criterio que el backend aplicó en Sprint 0 antes de decidir su stack real en Sprint 5.
 
 ---
 

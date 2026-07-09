@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { StatusBadge } from '@shared/components/atoms/StatusBadge';
 import { Button } from '@shared/components/atoms/Button';
 import { Select } from '@shared/components/atoms/Select';
@@ -122,12 +122,18 @@ export function SolicitudDetallePage(): JSX.Element {
         </div>
       ) : null}
 
-      {!esDueño && !puedeOfertar ? (
-        // Enviar mensaje al publicador (Fase 5 sección 2.5) se conecta en el Sprint F5 (Mensajería).
-        <p>💬 Enviar mensaje al publicador — disponible en un sprint próximo.</p>
+      {!esDueño && !puedeOfertar && sesion.data ? (
+        <p>
+          <Link to={`/conversaciones/${solicitud.data.beneficiarioId}`}>💬 Enviar mensaje al publicador</Link>
+        </p>
       ) : null}
 
-      {ofertaAceptada ? <CoordinacionEntrega idReferencia={ofertaAceptada.donacionId} /> : null}
+      {ofertaAceptada ? (
+        <CoordinacionEntrega
+          idReferencia={ofertaAceptada.donacionId}
+          otroParticipanteId={esDueño ? ofertaAceptada.donanteId : solicitud.data.beneficiarioId}
+        />
+      ) : null}
       <MatchesSugeridos entidadTipo="SOLICITUD" entidadId={solicitud.data.id} />
     </div>
   );
