@@ -1,5 +1,4 @@
 import type { INotificacionRepository } from '../ports/INotificacionRepository.js';
-import type { IWebhookNotifier } from '../ports/IWebhookNotifier.js';
 import type { IEventoSistemaRepository } from '../ports/IEventoSistemaRepository.js';
 import type { IDonacionRepository } from '@domain/donaciones/ports/IDonacionRepository.js';
 import type { ISolicitudRepository } from '@domain/solicitudes/ports/ISolicitudRepository.js';
@@ -14,9 +13,13 @@ import type { TipoEntidadIA } from '@domain/ia/ports/IAnalisisIARepository.js';
  * `RiesgoDetectado` (Sprint 4). Un método por evento — cada `eventBus.on(...)` en di-container.ts
  * llama al método correspondiente, mismo patrón que ModeracionIAService.
  *
- * **Doble canal** (Fase 8, ADR-028/029): in-app (`INotificacionRepository`, los 12+1 eventos) y
- * correo vía n8n (`IWebhookNotifier`, solo los 7 eventos "de alto valor" listados en Fase 8 sección
- * 5 — `notificarConCorreo` en vez de `notificar`).
+ * **Solo canal in-app** (`INotificacionRepository`) — el canal de correo vía n8n (Fase 8,
+ * ADR-028/029/030/031) se removió del proyecto (decisión del usuario, 2026-07-10): la
+ * configuración manual del workflow en la UI de n8n (credenciales SMTP, nodos Switch/Set/Send
+ * Email) nunca se completó, y se optó por eliminar la integración en vez de dejarla a medio
+ * construir. `IWebhookNotifier`/`N8nWebhookAdapter`/`ILogsN8nRepository` y el servicio `n8n` de
+ * `docker-compose.yml` se eliminaron junto con esta simplificación — ver
+ * `docs/fases/fase-08-automatizaciones.md` (marcada como removida) y `docs/PLAN_FRONTEND.md`.
  *
  * Para `EntregaProgramada`/`EntregaConfirmada`/`PublicacionModerada`, resolver el destinatario exige
  * cruzar a Donaciones/Solicitudes/Trueques — misma necesidad que `EntregaAutorizacionService`
@@ -25,7 +28,6 @@ import type { TipoEntidadIA } from '@domain/ia/ports/IAnalisisIARepository.js';
 export class NotificacionDispatchService {
   constructor(
     private readonly notificacionRepository: INotificacionRepository,
-    private readonly webhookNotifier: IWebhookNotifier,
     private readonly eventoSistemaRepository: IEventoSistemaRepository,
     private readonly donacionRepository: IDonacionRepository,
     private readonly solicitudRepository: ISolicitudRepository,
@@ -50,29 +52,6 @@ export class NotificacionDispatchService {
       .catch(() => undefined);
   }
 
-  /** In-app + correo (n8n) — solo para los 7 eventos "de alto valor" (Fase 8, sección 5). */
-  private async notificarConCorreo(
-    usuarioId: string,
-    evento: string,
-    entidad: string,
-    entidadId: string,
-    mensaje: string,
-    datos: Record<string, unknown>,
-  ): Promise<void> {
-    this.notificar(usuarioId, evento, entidad, entidadId, mensaje);
-    const usuario = await this.usuarioRepository.buscarPorId(usuarioId);
-    if (!usuario) return;
-    await this.webhookNotifier.emitir({
-      evento,
-      entidad,
-      entidadId,
-      usuarioDestinoId: usuarioId,
-      usuarioDestinoCorreo: usuario.correo,
-      datos,
-      timestamp: new Date().toISOString(),
-    });
-  }
-
   async alUsuarioRegistrado(payload: { id: string; nombre: string }): Promise<void> {
     this.notificar(payload.id, 'UsuarioRegistrado', null, null, `¡Bienvenido/a a DonaConnect, ${payload.nombre}!`);
   }
@@ -81,28 +60,12 @@ export class NotificacionDispatchService {
     this.notificar(payload.donanteId, 'DonacionPublicada', 'DONACION', payload.id, `Tu donación "${payload.titulo}" fue publicada.`);
   }
 
-  /** Correo (Fase 8 sección 4/5) — destinatario: Beneficiario. */
   async alOfertaRecibida(payload: { solicitudId: string; beneficiarioId: string }): Promise<void> {
-    await this.notificarConCorreo(
-      payload.beneficiarioId,
-      'OfertaRecibida',
-      'SOLICITUD',
-      payload.solicitudId,
-      'Recibiste una oferta para tu solicitud.',
-      { solicitudId: payload.solicitudId },
-    );
+    this.notificar(payload.beneficiarioId, 'OfertaRecibida', 'SOLICITUD', payload.solicitudId, 'Recibiste una oferta para tu solicitud.');
   }
 
-  /** Correo (Fase 8 sección 4/5) — destinatario: Beneficiario. */
   async alSolicitudAceptadaPorDonante(payload: { id: string; beneficiarioId: string }): Promise<void> {
-    await this.notificarConCorreo(
-      payload.beneficiarioId,
-      'SolicitudAceptadaPorDonante',
-      'SOLICITUD',
-      payload.id,
-      'Un donante aceptó tu solicitud.',
-      { solicitudId: payload.id },
-    );
+    this.notificar(payload.beneficiarioId, 'SolicitudAceptadaPorDonante', 'SOLICITUD', payload.id, 'Un donante aceptó tu solicitud.');
   }
 
   async alSolicitudAtendida(payload: { id: string; beneficiarioId: string }): Promise<void> {
@@ -114,40 +77,28 @@ export class NotificacionDispatchService {
     this.notificar(payload.usuarioId, 'TruequePublicado', 'TRUEQUE', payload.id, `Tu trueque "${payload.titulo}" fue publicado.`);
   }
 
-  /** Correo (Fase 8 sección 4/5) — destinatario: dueño del trueque origen. */
   async alPropuestaTruequeRecibida(payload: { truequeOrigenId: string; dueñoOrigenId: string }): Promise<void> {
-    await this.notificarConCorreo(
+    this.notificar(
       payload.dueñoOrigenId,
       'PropuestaTruequeRecibida',
       'TRUEQUE',
       payload.truequeOrigenId,
       'Recibiste una propuesta de trueque.',
-      { truequeOrigenId: payload.truequeOrigenId },
     );
   }
 
-  /** Correo (Fase 8 sección 4/5) — destinatario: ambas partes (2 envíos separados). */
   async alTruequeAceptadoBilateralmente(payload: {
     truequeOrigenId: string;
     dueñoOrigenId: string;
     proponenteId: string;
   }): Promise<void> {
-    const datos = { truequeOrigenId: payload.truequeOrigenId };
-    await this.notificarConCorreo(
-      payload.dueñoOrigenId,
-      'TruequeAceptadoBilateralmente',
-      'TRUEQUE',
-      payload.truequeOrigenId,
-      'Tu trueque fue aceptado.',
-      datos,
-    );
-    await this.notificarConCorreo(
+    this.notificar(payload.dueñoOrigenId, 'TruequeAceptadoBilateralmente', 'TRUEQUE', payload.truequeOrigenId, 'Tu trueque fue aceptado.');
+    this.notificar(
       payload.proponenteId,
       'TruequeAceptadoBilateralmente',
       'TRUEQUE',
       payload.truequeOrigenId,
       'Tu propuesta de trueque fue aceptada.',
-      datos,
     );
   }
 
@@ -156,22 +107,14 @@ export class NotificacionDispatchService {
     await this.registrarEventoKpi('TruequeIntercambiado', 'TRUEQUE', payload.id, payload.usuarioId);
   }
 
-  /** Correo (Fase 8 sección 4/5) — destinatario: ambas partes involucradas. `idReferencia` (extensión
-   * post-cierre, ver docs/PLAN_FRONTEND.md) es el id de la Donación/Trueque ORIGEN — antes solo se
-   * recibía el id de la propia Entrega, que no sirve para `resolverPartesOrigen` (bug real: nunca
-   * resolvía ninguna parte, así que esta notificación nunca se generaba) ni para navegar desde el
-   * frontend (no hay ruta `/entregas/:id`). */
+  /** `idReferencia` (extensión post-cierre, ver docs/PLAN_FRONTEND.md) es el id de la
+   * Donación/Trueque ORIGEN — antes solo se recibía el id de la propia Entrega, que no sirve para
+   * `resolverPartesOrigen` (bug real: nunca resolvía ninguna parte, así que esta notificación
+   * nunca se generaba) ni para navegar desde el frontend (no hay ruta `/entregas/:id`). */
   async alEntregaProgramada(payload: { id: string; idReferencia: string; tipoOperacion: TipoOperacionEntrega }): Promise<void> {
     const partes = await this.resolverPartesOrigen(payload.tipoOperacion, payload.idReferencia);
     for (const usuarioId of partes) {
-      await this.notificarConCorreo(
-        usuarioId,
-        'EntregaProgramada',
-        payload.tipoOperacion,
-        payload.idReferencia,
-        'Se programó una entrega/retiro.',
-        { entregaId: payload.id },
-      );
+      this.notificar(usuarioId, 'EntregaProgramada', payload.tipoOperacion, payload.idReferencia, 'Se programó una entrega/retiro.');
     }
   }
 
@@ -183,34 +126,22 @@ export class NotificacionDispatchService {
     await this.registrarEventoKpi('EntregaConfirmada', 'ENTREGA', payload.id, partes[0] ?? null);
   }
 
-  /** Correo (Fase 8 sección 4/5) — destinatario: autor de la publicación. */
   async alPublicacionModerada(payload: { tipoEntidad: TipoEntidadIA; entidadId: string; accion: string }): Promise<void> {
     const propietarioId = await this.resolverPropietarioPublicacion(payload.tipoEntidad, payload.entidadId);
     if (!propietarioId) return;
-    await this.notificarConCorreo(
+    this.notificar(
       propietarioId,
       'PublicacionModerada',
       payload.tipoEntidad,
       payload.entidadId,
       `Tu publicación fue moderada (${payload.accion.toLowerCase()}).`,
-      { accion: payload.accion },
     );
   }
 
-  /** Correo (Fase 8 sección 4/5) — destinatarios: Administradores. */
   async alRiesgoDetectado(payload: { tipoEntidad: TipoEntidadIA; entidadId: string }): Promise<void> {
     const administradores = await this.usuarioRepository.listarPorRol('ADMINISTRADOR');
     for (const admin of administradores) {
       this.notificar(admin.id, 'RiesgoDetectado', payload.tipoEntidad, payload.entidadId, 'Una publicación fue marcada con riesgo por IA.');
-      await this.webhookNotifier.emitir({
-        evento: 'RiesgoDetectado',
-        entidad: payload.tipoEntidad,
-        entidadId: payload.entidadId,
-        usuarioDestinoId: admin.id,
-        usuarioDestinoCorreo: admin.correo,
-        datos: {},
-        timestamp: new Date().toISOString(),
-      });
     }
   }
 

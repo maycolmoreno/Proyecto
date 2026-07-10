@@ -15,11 +15,30 @@ const RUTA_POR_ENTIDAD_TIPO: Record<string, string> = {
   TRUEQUE: '/trueques',
 };
 
+// Fallback para notificaciones creadas antes de que `entidadTipo` existiera (ver
+// docs/PLAN_FRONTEND.md) — para estos `tipo` de evento el dominio es inequívoco por el nombre
+// mismo, así que se puede reconstruir la ruta sin depender del campo nuevo. `PublicacionModerada`/
+// `RiesgoDetectado`/`EntregaProgramada`/`EntregaConfirmada` quedan fuera a propósito: eran
+// genuinamente ambiguos antes de la extensión (podían ser Donación, Solicitud o Trueque) y no hay
+// forma confiable de adivinarlos retroactivamente.
+const ENTIDAD_TIPO_POR_EVENTO: Record<string, string> = {
+  DonacionPublicada: 'DONACION',
+  OfertaRecibida: 'SOLICITUD',
+  SolicitudAceptadaPorDonante: 'SOLICITUD',
+  SolicitudAtendida: 'SOLICITUD',
+  TruequePublicado: 'TRUEQUE',
+  PropuestaTruequeRecibida: 'TRUEQUE',
+  TruequeAceptadoBilateralmente: 'TRUEQUE',
+  TruequeIntercambiado: 'TRUEQUE',
+};
+
 // `entidadTipo` es null para notificaciones que no llevan a ninguna publicación (ej.
 // UsuarioRegistrado) o para registros anteriores a esta extensión (ver docs/PLAN_FRONTEND.md).
 function rutaDe(n: Notificacion): string | null {
-  if (!n.entidadTipo || !n.entidadRelacionada) return null;
-  const base = RUTA_POR_ENTIDAD_TIPO[n.entidadTipo];
+  if (!n.entidadRelacionada) return null;
+  const entidadTipo = n.entidadTipo ?? ENTIDAD_TIPO_POR_EVENTO[n.tipo];
+  if (!entidadTipo) return null;
+  const base = RUTA_POR_ENTIDAD_TIPO[entidadTipo];
   return base ? `${base}/${n.entidadRelacionada}` : null;
 }
 

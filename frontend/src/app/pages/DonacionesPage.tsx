@@ -44,6 +44,7 @@ export function DonacionesPage(): JSX.Element {
             campo: 'categoriaId',
             etiqueta: 'Categoría',
             opciones: (categorias.data ?? []).map((c) => ({ valor: c.id, etiqueta: c.nombre })),
+            variante: 'chips',
           },
           { campo: 'estado', etiqueta: 'Estado', opciones: OPCIONES_ESTADO.map((o) => ({ valor: o.valor, etiqueta: o.etiqueta })) },
         ]}

@@ -1,8 +1,8 @@
 # Fase 8 — Automatizaciones (n8n)
 
-**Estado:** ✅ Aprobada
+**Estado:** ⛔ Removida (2026-07-10) — n8n se sacó por completo del proyecto (ADR-047). Este documento queda como registro histórico del diseño original; ya no describe el sistema actual. Ver `docs/DECISIONES.md` ADR-047 y el historial de `docs/fases/fase-06-backend.md`.
 **Fecha de creación:** 2026-07-07
-**Última actualización:** 2026-07-08 (Sprint 5)
+**Última actualización:** 2026-07-10 (removida)
 **Fuente:** Fases 1, 2, 6 + `docs/DECISIONES.md` (ADR-001, ADR-002, ADR-023)
 
 ## Historial de cambios
@@ -11,6 +11,7 @@
 | 2026-07-07 | Versión inicial. Se resuelve la pregunta abierta de Fase 1 sobre el canal de notificaciones: in-app se resuelve en el backend sin n8n; n8n se reserva exclusivamente para correo (y futuros canales externos). Se define el workflow genérico, el contrato de webhook y los 7 eventos que disparan correo. |
 | 2026-07-07 | Aprobada por el usuario sin cambios. Se avanza a Fase 9. |
 | 2026-07-08 | Sprint 5 (implementación, `docs/fases/fase-06-backend.md`): `N8nWebhookAdapter` implementa el contrato de la sección 2 exactamente como fue diseñado (`evento/entidad/entidadId/usuarioDestinoId/usuarioDestinoCorreo/datos/timestamp`, correo resuelto por el backend). Verificado contra el contenedor `n8n` real del `docker-compose.yml`: la petición HTTP llega correctamente al Webhook Trigger; como el workflow (Switch → Set → Send Email, sección 5) **no se configuró en la UI de n8n** — explícitamente fuera del alcance de este documento y de la implementación de backend — la respuesta es `404`, registrada correctamente como `FALLIDO` en `logs_n8n` sin bloquear el evento de dominio que la originó (mismo patrón RNF-002 que el resto de integraciones externas del proyecto). Sin desviaciones de diseño; queda pendiente solo la configuración manual del workflow en n8n (credenciales SMTP, nodos Switch/Set/Send Email) si se desea correo real, no código. |
+| 2026-07-10 | **Removida por completo (ADR-047).** El usuario, durante la prueba visual del frontend en `docs/PLAN_FRONTEND.md`, decidió no completar la configuración manual del workflow (llegó a evaluar Mailtrap y Gmail con contraseña de aplicación para las credenciales SMTP, pero finalmente pidió sacar n8n del proyecto en vez de configurarlo) y eliminar la integración en vez de dejarla a medio construir. Se removieron: el servicio `n8n` de `docker-compose.yml` (contenedor y volumen `n8n_data`), `N8nWebhookAdapter`, `IWebhookNotifier`, `MongooseLogsN8nRepository`, `ILogsN8nRepository`, `N8N_WEBHOOK_URL`. `NotificacionDispatchService` quedó solo con canal in-app (`notificarConCorreo` colapsado en `notificar`). Todas las notificaciones (los 12 eventos + `RiesgoDetectado`) se comportan igual ahora — ya no existe la distinción "7 eventos de alto valor con correo" de la sección 5. Verificado: `npm run typecheck && npm run lint` limpios, contenedor `api` recreado, flujo de notificación in-app probado con curl real tras la remoción (sigue funcionando idéntico). |
 
 ---
 

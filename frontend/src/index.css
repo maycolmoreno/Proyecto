@@ -3,36 +3,53 @@
    desktop 1024-1439 · desktop-ancho 1440-2560. Mobile-first: reglas base = mobile pequeño,
    se mejoran con min-width media queries (Fase 5 sección 6). */
 :root {
-  font-family: system-ui, sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   color-scheme: light dark;
+
+  /* Dirección visual "marketplace" (2026-07-10, aprobada por el usuario) — terracota cálido +
+     verde jade (conecta con ODS 12 / reutilización) + acento dorado, sobre fondo marfil cálido en
+     vez de blanco frío de e-commerce genérico. */
+  --color-primario: #e85d2f;
+  --color-primario-oscuro: #b8431c;
+  --color-secundario: #1f6f5c;
+  --color-secundario-oscuro: #164f42;
+  --color-acento: #ffc93c;
+  --color-texto: #241c15;
+  --color-texto-tenue: #6b5d4f;
+  --color-borde: #e7ddce;
+  --color-superficie: #ffffff;
+  --color-fondo: #fbf6ef;
+  --radius-base: 10px;
+  --radius-tarjeta: 14px;
+  --sombra-tarjeta: 0 2px 8px rgb(36 28 21 / 8%);
+  --sombra-tarjeta-hover: 0 8px 24px rgb(36 28 21 / 14%);
+  --espaciado-touch-min: 44px;
+  --fuente-display: 'Sora', system-ui, sans-serif;
 
   /* Estados de negocio → color semántico (Fase 5 sección 4.2). El color nunca es el único
      indicador (RNF-008/WCAG AA) — StatusBadge siempre incluye texto. */
-  --color-estado-neutral: #2563eb;
-  --color-estado-neutral-bg: #dbeafe;
-  --color-estado-progreso: #b45309;
-  --color-estado-progreso-bg: #fef3c7;
-  --color-estado-exito: #15803d;
-  --color-estado-exito-bg: #dcfce7;
-  --color-estado-cancelado: #c0392b;
-  --color-estado-cancelado-bg: #fde2e0;
+  --color-estado-neutral: #1f6f5c;
+  --color-estado-neutral-bg: #e3efe9;
+  --color-estado-progreso: #a6631a;
+  --color-estado-progreso-bg: #fbead2;
+  --color-estado-exito: #2f8f5b;
+  --color-estado-exito-bg: #e1f3e8;
+  --color-estado-cancelado: #b8431c;
+  --color-estado-cancelado-bg: #f7e2d9;
 
   /* Urgencia (Solicitud) */
-  --color-urgencia-baja: #475569;
-  --color-urgencia-baja-bg: #e2e8f0;
-  --color-urgencia-media: #b45309;
-  --color-urgencia-media-bg: #fef3c7;
-  --color-urgencia-alta: #c0392b;
-  --color-urgencia-alta-bg: #fde2e0;
+  --color-urgencia-baja: #6b5d4f;
+  --color-urgencia-baja-bg: #ede6da;
+  --color-urgencia-media: #a6631a;
+  --color-urgencia-media-bg: #fbead2;
+  --color-urgencia-alta: #e85d2f;
+  --color-urgencia-alta-bg: #fbe0d5;
+}
 
-  --color-primario: #2563eb;
-  --color-texto: #1f2937;
-  --color-texto-tenue: #6b7280;
-  --color-borde: #d1d5db;
-  --color-superficie: #ffffff;
-  --color-fondo: #f9fafb;
-  --radius-base: 6px;
-  --espaciado-touch-min: 44px;
+h1, h2, h3 {
+  font-family: var(--fuente-display);
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 * {
@@ -80,10 +97,12 @@ body {
 .btn {
   padding: 0.6rem 1.2rem;
   border-radius: var(--radius-base);
-  border: 1px solid transparent;
+  border: 1.5px solid transparent;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
   min-height: var(--espaciado-touch-min);
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
 }
 
 .btn--primario {
@@ -91,10 +110,18 @@ body {
   color: white;
 }
 
+.btn--primario:hover:not(:disabled) {
+  background: var(--color-primario-oscuro);
+}
+
 .btn--secundario {
   background: transparent;
-  border-color: var(--color-primario);
-  color: var(--color-primario);
+  border-color: var(--color-secundario);
+  color: var(--color-secundario);
+}
+
+.btn--secundario:hover:not(:disabled) {
+  background: var(--color-estado-neutral-bg);
 }
 
 .btn--peligro {
@@ -264,7 +291,10 @@ body {
 }
 
 .shell__navbar-marca {
-  font-weight: 700;
+  font-family: var(--fuente-display);
+  font-weight: 800;
+  font-size: 1.125rem;
+  letter-spacing: -0.01em;
   color: var(--color-primario);
   text-decoration: none;
 }
@@ -386,30 +416,89 @@ body {
   }
 }
 
-/* PublicacionCard (Fase 5 sección 2.3) */
+/* PublicacionCard (Fase 5 sección 2.3) — dirección visual marketplace, 2026-07-10: imagen
+   protagonista, insignia superpuesta con forma de etiqueta (elemento de firma), sombra + hover. */
 .publicacion-card {
   display: block;
   border: 1px solid var(--color-borde);
-  border-radius: var(--radius-base);
+  border-radius: var(--radius-tarjeta);
   overflow: hidden;
   text-decoration: none;
   color: inherit;
   background: var(--color-superficie);
+  box-shadow: var(--sombra-tarjeta);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.publicacion-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--sombra-tarjeta-hover);
 }
 
 .publicacion-card__imagen {
+  position: relative;
   aspect-ratio: 4 / 3;
-  background: var(--color-fondo);
+  background: linear-gradient(135deg, var(--color-estado-neutral-bg), var(--color-fondo));
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2rem;
+  font-size: 2.25rem;
 }
 
 .publicacion-card__imagen img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* Convierte el StatusBadge (píldora) en una etiqueta de mercado con muesca — solo en este
+   contexto; en el resto de la app (detalle, tablas admin) StatusBadge se queda como píldora. */
+.publicacion-card__etiqueta {
+  position: absolute;
+  top: 0.625rem;
+  left: -0.125rem;
+}
+
+.publicacion-card__etiqueta .badge {
+  position: relative;
+  border-radius: 0;
+  padding: 0.3rem 0.65rem 0.3rem 1rem;
+  clip-path: polygon(10px 0, 100% 0, 100% 100%, 10px 100%, 0 50%);
+  filter: drop-shadow(0 2px 3px rgb(36 28 21 / 20%));
+}
+
+.publicacion-card__etiqueta .badge::before {
+  content: '';
+  position: absolute;
+  left: 0.3rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 85%);
+}
+
+/* Sobre una foto, el tono claro del badge normal (fondo pastel + texto oscuro) queda ilegible —
+   la etiqueta necesita fondo sólido y texto blanco para contrastar contra cualquier imagen. */
+.publicacion-card__etiqueta .badge--neutral {
+  background: var(--color-secundario);
+  color: white;
+}
+
+.publicacion-card__etiqueta .badge--progreso {
+  background: var(--color-estado-progreso);
+  color: white;
+}
+
+.publicacion-card__etiqueta .badge--exito {
+  background: var(--color-estado-exito);
+  color: white;
+}
+
+.publicacion-card__etiqueta .badge--cancelado {
+  background: var(--color-estado-cancelado);
+  color: white;
 }
 
 .publicacion-card__cuerpo {
@@ -421,7 +510,7 @@ body {
 
 .publicacion-card__titulo {
   margin: 0;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .publicacion-card__badges {
@@ -509,6 +598,39 @@ body {
   border-radius: var(--radius-base);
   border: 1px solid var(--color-borde);
   min-height: var(--espaciado-touch-min);
+}
+
+/* Chips (dirección visual marketplace, 2026-07-10) — filtro de categoría, estilo Mercado
+   Libre/OLX: fila desplazable de píldoras en vez de un <select>, más rápida de escanear/tocar. */
+.filtro-panel .chips {
+  flex-basis: 100%;
+}
+
+.chips {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.chip {
+  flex-shrink: 0;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  border: 1.5px solid var(--color-borde);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  font-size: 0.84375rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  min-height: var(--espaciado-touch-min);
+}
+
+.chip--activo {
+  background: var(--color-primario);
+  border-color: var(--color-primario);
+  color: white;
 }
 
 /* Wizard */

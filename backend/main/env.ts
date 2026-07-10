@@ -23,5 +23,4 @@ export const env = {
   CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET ?? '',
   CLOUDINARY_UPLOAD_PRESET: process.env.CLOUDINARY_UPLOAD_PRESET ?? '',
   IA_API_KEY: process.env.IA_API_KEY ?? '',
-  N8N_WEBHOOK_URL: process.env.N8N_WEBHOOK_URL ?? '',
 };

@@ -90,9 +90,7 @@ import { ListarUsuariosUseCase } from '@application/administracion/use-cases/Lis
 import { AdminController } from '@adapters/administracion/controllers/admin.controller.js';
 
 import { MongooseNotificacionRepository } from '@adapters/notificaciones/repositories/MongooseNotificacionRepository.js';
-import { MongooseLogsN8nRepository } from '@adapters/notificaciones/repositories/MongooseLogsN8nRepository.js';
 import { MongooseEventoSistemaRepository } from '@adapters/notificaciones/repositories/MongooseEventoSistemaRepository.js';
-import { N8nWebhookAdapter } from '@adapters/notificaciones/external/N8nWebhookAdapter.js';
 import { NotificacionDispatchService } from '@domain/notificaciones/services/NotificacionDispatchService.js';
 import { ListarNotificacionesUseCase } from '@application/notificaciones/use-cases/ListarNotificacionesUseCase.js';
 import { MarcarLeidoUseCase } from '@application/notificaciones/use-cases/MarcarLeidoUseCase.js';
@@ -349,14 +347,12 @@ eventBus.on<PayloadPublicacion>('TruequePublicado', (payload) =>
 );
 
 // BC-Notificaciones (Fase 2, sección 6). Segundo listener real del Event Bus — se suscribe a los
-// 12 eventos de dominio de Fase 6 sección 5 + RiesgoDetectado (Sprint 4).
+// 12 eventos de dominio de Fase 6 sección 5 + RiesgoDetectado (Sprint 4). Solo canal in-app — el
+// canal de correo vía n8n se removió del proyecto (2026-07-10, ver historial de fase-06-backend.md).
 const notificacionRepository = new MongooseNotificacionRepository();
-const logsN8nRepository = new MongooseLogsN8nRepository();
 const eventoSistemaRepository = new MongooseEventoSistemaRepository();
-const webhookNotifier = new N8nWebhookAdapter(env.N8N_WEBHOOK_URL, logsN8nRepository);
 const notificacionDispatchService = new NotificacionDispatchService(
   notificacionRepository,
-  webhookNotifier,
   eventoSistemaRepository,
   donacionRepository,
   solicitudRepository,

@@ -25,13 +25,16 @@ export function PublicacionCard({
     <Link to={rutaDetalle} className="publicacion-card">
       <div className="publicacion-card__imagen">
         {imagenUrl ? <img src={imagenUrl} alt="" /> : <span aria-hidden="true">📦</span>}
+        {/* Insignia superpuesta estilo "etiqueta de mercado" (elemento de firma, dirección visual
+            2026-07-10) — sobre la foto, no debajo, mismo patrón que las etiquetas de envío de los
+            marketplaces de referencia (Mercado Libre/OLX). */}
+        <div className="publicacion-card__etiqueta">
+          <StatusBadge estado={estado} />
+        </div>
       </div>
       <div className="publicacion-card__cuerpo">
         <p className="publicacion-card__titulo">{titulo}</p>
-        <div className="publicacion-card__badges">
-          <StatusBadge estado={estado} />
-          {urgencia ? <span className={claseUrgencia(urgencia)}>{urgencia}</span> : null}
-        </div>
+        {urgencia ? <span className={claseUrgencia(urgencia)}>{urgencia}</span> : null}
         {ubicacion ? <p className="publicacion-card__ubicacion">📍 {ubicacion}</p> : null}
       </div>
     </Link>

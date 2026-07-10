@@ -34,10 +34,10 @@
 |---|---|---|
 | F0 | Fundación (shell, design tokens, componentes base, perfil) | ✅ Cerrado (2026-07-08) — verificado visualmente por el usuario |
 | F1 | Donaciones + Categorías | ✅ Cerrado (2026-07-09) — verificado por el usuario (publicación con foto, incluye fix de Cloudinary) |
-| F2 | Solicitudes + Ofertas + Entregas | ✅ Código cerrado (2026-07-08) — ⚠️ pendiente de confirmación visual |
-| F3 | Trueques + Propuestas | ✅ Código cerrado (2026-07-09) — verificado end-to-end contra la API real; ⚠️ pendiente de confirmación visual en navegador |
-| F4 | IA (chatbot + sugerencias) + Administración | ✅ Código cerrado (2026-07-09) — verificado end-to-end contra la API real (incluye extensión de backend GET /admin/usuarios); ⚠️ pendiente de confirmación visual en navegador |
-| F5 | Mensajería + Notificaciones + Dashboard + QA final | ✅ Código cerrado (2026-07-09) — verificado end-to-end contra la API real (incluye extensión de backend GET /usuarios/:id); ⚠️ pendiente de confirmación visual en navegador |
+| F2 | Solicitudes + Ofertas + Entregas | ✅ Cerrado (2026-07-10) — verificado por el usuario en navegador |
+| F3 | Trueques + Propuestas | ✅ Cerrado (2026-07-10) — verificado end-to-end + confirmado por el usuario en navegador |
+| F4 | IA (chatbot + sugerencias) + Administración | ✅ Cerrado (2026-07-10) — verificado end-to-end + confirmado por el usuario (chatbot, sugerencia IA, panel admin) |
+| F5 | Mensajería + Notificaciones + Dashboard + QA final | ✅ Cerrado (2026-07-10) — verificado end-to-end + confirmado por el usuario; 3 bugs reales encontrados en la prueba y corregidos (ver sección de correcciones post-cierre) |
 
 ---
 
@@ -98,7 +98,7 @@
 **Verificación:**
 - [x] `npm run typecheck && npm run lint && npm run build` — limpios
 - [x] Servidor de desarrollo sirve el código nuevo sin error (`curl` a los módulos, HTTP 200)
-- [ ] **Verificación visual — pendiente de confirmación del usuario** (mismo motivo que F0: sin acceso a navegador real).
+- [x] **Verificación visual — confirmada por el usuario** (2026-07-10, publicación con foto, incluye fix de Cloudinary).
 
 ---
 
@@ -124,7 +124,7 @@
 - [x] `npm run typecheck && npm run lint && npm run build` — limpios
 - [x] Backend: typecheck/lint limpios tras la extensión; contenedor `api` reiniciado y probado
 - [x] Frontend: contenedor `web` reiniciado, servidor sirve el código nuevo sin error
-- [ ] **Verificación visual — pendiente de confirmación del usuario.**
+- [x] **Verificación visual — confirmada por el usuario** (2026-07-10, probando el flujo real detectó el bug de visibilidad de publicaciones canceladas, corregido en la sección de correcciones post-cierre).
 
 ---
 
@@ -153,7 +153,7 @@
 - [x] `npm run typecheck && npm run lint && npm run build` — limpios.
 - [x] Contenedor `web` reiniciado.
 - [x] End-to-end contra la API real (curl, dos usuarios): registro, login, crear 2 trueques, proponer, aceptar, listar paginado, firmar imagen (Cloudinary) — todos con el status HTTP esperado.
-- [ ] **Verificación visual — pendiente de confirmación del usuario en navegador.**
+- [x] **Verificación visual — confirmada por el usuario** (2026-07-10).
 
 ---
 
@@ -186,7 +186,7 @@
 - [x] Backend: `npm run typecheck && npm run lint` limpios tras la extensión de `/admin/usuarios`; contenedor `api` reiniciado y probado.
 - [x] Frontend: `npm run typecheck && npm run lint && npm run build` limpios; contenedor `web` reiniciado.
 - [x] End-to-end contra la API real (curl): chatbot (mensaje + historial), clasificar, moderar trueque, moderar usuario (suspender confirmado con GET posterior), listar usuarios (200 admin / 403 no-admin).
-- [ ] **Verificación visual — pendiente de confirmación del usuario en navegador.**
+- [x] **Verificación visual — confirmada por el usuario** (2026-07-10): chatbot flotante y "Sugerir con IA" probados y funcionando; panel de administración accedido y usado para crear la cuenta ADMINISTRADOR.
 
 ---
 
@@ -218,13 +218,43 @@
 - [x] Backend: `npm run typecheck && npm run lint` limpios tras la extensión de `/usuarios/:id`; contenedor `api` reiniciado y probado (nota operativa: Docker Desktop se cerró solo a mitad de sesión — reiniciado manualmente, los 5 contenedores volvieron arriba automáticamente).
 - [x] Frontend: `npm run typecheck && npm run lint && npm run build` limpios; contenedor `web` reiniciado.
 - [x] End-to-end contra la API real (curl): enviar mensaje (crea conversación implícita), listar conversaciones, obtener hilo con un participante (200) y con uno sin conversación previa (404 correcto), listar notificaciones, marcar leída (204, confirmado con GET posterior), `GET /dashboard/impacto` con conteos reales no triviales (13 donaciones publicadas, 2 trueques intercambiados, etc.).
-- [ ] **Verificación visual — pendiente de confirmación del usuario en navegador** (incluye los 5 breakpoints de Fase 5 sección 5, estados loading/empty/error, accesibilidad táctil ≥44×44px — no verificables sin navegador real).
+- [x] **Verificación visual funcional — confirmada por el usuario** (2026-07-10): mensajería, notificaciones y dashboard probados en flujo real (los bugs de polling/navegación reportados en esta sesión salieron de esta prueba). Los 5 breakpoints específicos y la accesibilidad táctil ≥44×44px no se verificaron uno por uno — quedan como QA fino pendiente, no bloqueante.
 - [ ] Testing automatizado de frontend (Vitest + Testing Library): **no agregado** — se documenta como fuera de alcance del MVP académico, mismo criterio que el backend aplicó en Sprint 0 antes de decidir su stack real en Sprint 5.
+
+---
+
+## Correcciones post-cierre (2026-07-10) — reportadas por el usuario tras probar F0-F5 en navegador
+
+**1. Publicaciones canceladas visibles en el listado público (comportamiento de marketplace).** El usuario esperaba que, al cancelar/bloquear una Donación/Solicitud/Trueque desde el panel admin, dejara de aparecer en el listado público — como en cualquier marketplace real (Mercado Libre, eBay). Investigación: no había ningún filtro, ni en backend ni en frontend, que ocultara `CANCELADA`/`CANCELADO` — technically ya eran visibles y se mezclaban con las activas. Fix: `ListarDonacionesUseCase`/`ListarSolicitudesUseCase`/`ListarTruequesUseCase` ahora excluyen el estado cancelado por defecto **solo cuando no se filtra explícitamente por estado y el solicitante no es ADMINISTRADOR** (nuevo campo `estadoExcluido` en `DonacionFiltros`/`SolicitudFiltros`/`TruequeFiltros`, traducido a `{ not: ... }` en el `where` de Prisma). El panel de Administración (`AdminPage` → pestaña Publicaciones) sigue viendo todo porque su token trae `rol=ADMINISTRADOR`. `donaciones.controller.ts` no pasaba `solicitante` a su caso de uso de listar (a diferencia de Solicitudes/Trueques, que ya lo hacían) — corregido también. La vista de detalle (`GET /:id`) sigue siendo accesible por URL directa mostrando el badge "Cancelada" (no se oculta, solo el listado). Verificado con curl: donación visible antes de cancelar → invisible en listado sin filtro tras cancelar → visible de nuevo con `?estado=CANCELADA` explícito → visible para admin sin filtro → detalle accesible por id.
+
+**2. Mensajes nuevos no aparecían sin recargar la página.** `useConversacion`/`useConversaciones` no tenían ningún mecanismo de actualización automática — solo se refrescaban cuando el propio usuario enviaba un mensaje (invalidación de su propia mutación). Si el otro participante escribía, nada lo reflejaba del lado del primero. Fix: mismo patrón de polling ya usado en `useNotificaciones` — `refetchInterval: 5000` en `useConversacion` (hilo abierto, más frecuente porque un chat activo necesita sentirse inmediato) y `refetchInterval: 15000` en `useConversaciones` (lista).
+
+**3. Las notificaciones no llevaban a ningún lado al hacer click (solo "marcar leída").** `Notificacion.entidadRelacionada` existía pero `PanelNotificaciones` nunca lo usaba para navegar. Investigación más profunda reveló dos problemas reales, no solo uno: (a) el tipo de entidad (`DONACION`/`SOLICITUD`/`TRUEQUE`) nunca se persistía junto al id — ambiguo para `PublicacionModerada`/`RiesgoDetectado`, que pueden referirse a cualquiera de los 3 dominios; (b) **bug real preexistente, no reportado por el usuario pero encontrado al investigar**: `EntregaProgramada`/`EntregaConfirmada` emitían el id de la propia Entrega en vez de `idReferencia` (el id de la Donación/Trueque origen) — como `NotificacionDispatchService.resolverPartesOrigen` esperaba `idReferencia`, la búsqueda de partes involucradas siempre fallaba en silencio y **estas dos notificaciones nunca se generaron para ningún usuario desde que se construyeron en Sprint 5** (el `.catch(() => undefined)` de `notificar()` ocultaba el fallo). Fix: `EntregaCoordinacionService.crear` y `ActualizarEntregaUseCase.ejecutar` ahora incluyen `idReferencia` en el payload del evento; `NotificacionDispatchService.notificar()`/`notificarConCorreo()` ganan un parámetro `entidadTipo` persistido en cada notificación (`INotificacionRepository`, modelo Mongoose, campo nuevo con `default: null` — no rompe documentos viejos). Frontend: `PanelNotificaciones` mapea `entidadTipo` → ruta (`DONACION`→`/donaciones/:id`, etc.) y envuelve cada item en un `<Link>` cuando es resoluble; el click también marca como leída. Verificado con curl real: notificación `DonacionPublicada` con `entidadTipo:"DONACION"` correcto, y — la prueba clave — un flujo completo de oferta-aceptada generó por primera vez notificaciones `EntregaProgramada` reales para ambas partes con el `entidadRelacionada` correcto (el id de la Donación, no el de la Entrega).
+
+**Verificación:** `npm run typecheck && npm run lint` limpios en backend; `npm run typecheck && npm run lint && npm run build` limpios en frontend; ambos contenedores (`api`, `web`) reiniciados; los 3 fixes verificados end-to-end contra la API real con datos de prueba nuevos (no solo lectura de datos viejos).
+
+---
+
+## Rediseño visual — dirección "marketplace" (2026-07-10)
+
+El usuario pidió una interfaz más enfocada a marketplace (referencia: Mercado Libre/OLX — tarjetas grandes con foto protagonista, colores vivos, denso en información). Se presentó una vista previa (Artifact HTML) con la propuesta antes de tocar la app real; aprobada sin cambios.
+
+**Tokens de diseño (`frontend/src/index.css`):**
+- Paleta nueva: terracota cálido `#e85d2f` (primario) + verde jade `#1f6f5c` (secundario, conecta con el indicador ODS 12 del dashboard) + dorado `#ffc93c` (acento) sobre fondo marfil cálido `#fbf6ef` (no blanco frío de e-commerce genérico) — deliberadamente distinta de los colores de marca reales de Mercado Libre (azul/amarillo), para no ser una copia literal, manteniendo la densidad/funcionalidad de ese estilo.
+- Tipografía: Sora (display, `h1`-`h3`, marca del Navbar) + Inter (todo lo demás) — autohospedadas vía `@fontsource/sora` y `@fontsource/inter` (npm, no Google Fonts por CDN), importadas en `main.tsx` con solo los pesos usados.
+- `--radius-base` sube de 6px a 10px; nuevo `--radius-tarjeta: 14px` específico para `PublicacionCard`.
+
+**Elemento de firma:** el `StatusBadge` dentro de `PublicacionCard` se renderiza como una "etiqueta de mercado" (forma de banderín con `clip-path`, muesca redonda, sombra) superpuesta sobre la foto — no como píldora debajo del título como antes. Fuera de las tarjetas (detalle, tablas de administración) `StatusBadge` sigue siendo una píldora normal; el cambio de forma ocurre solo por contexto CSS (`.publicacion-card__etiqueta .badge`), sin nueva prop en el componente.
+
+**Filtro de categoría como chips:** `FiltroPanel` gana una `variante: 'chips'` opcional por definición de filtro (`DonacionesPage`/`SolicitudesPage`/`TruequesPage` la usan para `categoriaId`, fila horizontal desplazable de píldoras en vez de `<select>`) — el resto de filtros (estado, urgencia) se quedan como `<select>`.
+
+**Verificación:** `npm run typecheck && npm run lint && npm run build` limpios. Cambio de dependencias (`@fontsource/*`) — contenedor `web` reconstruido con `docker compose build web && docker compose up -d --renew-anon-volumes web` (no alcanza con `restart`, `node_modules` vive en volumen anónimo separado del bind mount).
+- [x] **Verificación visual — confirmada por el usuario** (2026-07-10): "esta bien", dirección aprobada sin cambios.
 
 ---
 
 ## Fuera del alcance de este documento
 
 - **Backend:** ya completo (`docs/PLAN_IMPLEMENTACION.md`, 5 sprints cerrados) — este documento solo consume su API.
-- **Configuración del workflow de n8n** (UI de n8n, correo) — pendiente, documentado en `docs/fases/fase-08-automatizaciones.md`, no es trabajo de frontend.
+- **n8n** — removido del proyecto por completo (2026-07-10, ADR-047 en `docs/DECISIONES.md`, decisión explícita del usuario). Ya no existe canal de correo; solo notificaciones in-app. Ver `docs/fases/fase-08-automatizaciones.md` (marcada como removida).
 - **Diseño visual de alta fidelidad** (paleta exacta con contraste verificado, tipografía, iconografía) — Fase 5 lo deja explícitamente para el momento de implementar ("Los tonos exactos... se definen al implementar en Fase 6, no en esta fase de especificación"); se resuelven decisiones puntuales de esta naturaleza sprint a sprint, documentando cualquier elección no trivial.

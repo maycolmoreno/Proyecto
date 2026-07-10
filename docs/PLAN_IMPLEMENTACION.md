@@ -172,12 +172,11 @@
 - [x] `NotificacionDispatchService` — **segundo listener real** del Event Bus, se suscribe a los 12 eventos de dominio + `RiesgoDetectado` y escribe en Mongo `notificaciones`
 - [x] `GET /notificaciones`, `PATCH /notificaciones/:id/leido`
 
-**n8n (Fase 8):**
-- [x] `adapters/notificaciones/external/N8nWebhookAdapter.ts` — implementa `IWebhookNotifier`, POST con el contrato exacto de Fase 8 sección 2, verificado contra el contenedor `n8n` real
-- [x] Solo los 7 eventos de "alto valor" disparan correo (dentro de `NotificacionDispatchService`, vía `notificarConCorreo`, en vez de una suscripción separada — mismo servicio, dos canales)
-- [x] Resultado registrado en `logs_n8n` (Mongo) — fallo no bloqueante confirmado (`HTTP 404` porque el workflow de n8n no está configurado en su UI, correctamente registrado como `FALLIDO` sin afectar el evento de dominio)
-- [ ] Configurar el workflow real en la UI de n8n (Webhook Trigger → Switch → Set → Send Email) — fuera de alcance de este documento (config. externa a n8n, no código de backend)
-- [ ] Credenciales SMTP dentro de n8n — mismo motivo, no aplica a este documento
+**n8n (Fase 8) — ⛔ removido del proyecto el 2026-07-10 (ADR-047, `docs/DECISIONES.md`).** Los checkboxes de esta subsección describen lo que se construyó en Sprint 5 y ya **no existe** en el código actual — se dejan como registro histórico, no como estado presente. El usuario decidió sacar n8n del proyecto por completo en vez de configurar el workflow manualmente; `NotificacionDispatchService` quedó solo con canal in-app. Detalle completo en el historial de `docs/fases/fase-06-backend.md` (entrada 2026-07-10).
+- [x] ~~`adapters/notificaciones/external/N8nWebhookAdapter.ts` — implementa `IWebhookNotifier`, POST con el contrato exacto de Fase 8 sección 2, verificado contra el contenedor `n8n` real~~ (eliminado)
+- [x] ~~Solo los 7 eventos de "alto valor" disparan correo (dentro de `NotificacionDispatchService`, vía `notificarConCorreo`, en vez de una suscripción separada — mismo servicio, dos canales)~~ (eliminado, todos los eventos son solo in-app ahora)
+- [x] ~~Resultado registrado en `logs_n8n` (Mongo) — fallo no bloqueante confirmado (`HTTP 404` porque el workflow de n8n no está configurado en su UI, correctamente registrado como `FALLIDO` sin afectar el evento de dominio)~~ (eliminado)
+- [ ] ~~Configurar el workflow real en la UI de n8n (Webhook Trigger → Switch → Set → Send Email)~~ — ya no aplica, n8n no forma parte del proyecto
 
 **Dashboard:**
 - [x] `DashboardQueryService` — conteos de Postgres (`estado_*`) + `$group` sobre `eventos_sistema` (Mongo), `GET /dashboard/impacto`

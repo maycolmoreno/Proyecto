@@ -44,6 +44,7 @@ export function SolicitudesPage(): JSX.Element {
             campo: 'categoriaId',
             etiqueta: 'Categoría',
             opciones: (categorias.data ?? []).map((c) => ({ valor: c.id, etiqueta: c.nombre })),
+            variante: 'chips',
           },
           { campo: 'urgencia', etiqueta: 'Urgencia', opciones: OPCIONES_URGENCIA },
         ]}

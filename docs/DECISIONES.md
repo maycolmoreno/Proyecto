@@ -250,7 +250,7 @@ Log vivo de decisiones tomadas durante el diseño. Cada entrada indica: fase en 
 - **Decisión:** `NotificacionDispatchService` (Fase 6) escribe directamente en Mongo `notificaciones` sin pasar por n8n. n8n se reserva exclusivamente para el canal de correo electrónico y futuros canales externos.
 - **Justificación:** La notificación in-app no requiere infraestructura externa; delegarla a n8n agregaría una dependencia innecesaria (si n8n cae, el feed in-app no debería verse afectado).
 - **Impacto:** Fase 6 (ya implementado), Fase 10 (n8n deja de ser crítico para el flujo principal de notificaciones).
-- **Estado:** Vigente.
+- **Estado:** Parcialmente vigente — la mitad "in-app sin n8n" se mantiene (nunca dependió de n8n); la reserva de n8n para correo queda sin efecto por ADR-033.
 
 ### ADR-029 — Solo eventos de "alto valor" disparan correo
 - **Fecha:** 2026-07-07
@@ -258,7 +258,7 @@ Log vivo de decisiones tomadas durante el diseño. Cada entrada indica: fase en 
 - **Decisión:** De los 12 eventos de dominio + `RiesgoDetectado`, solo 7 disparan correo vía n8n (OfertaRecibida, SolicitudAceptadaPorDonante, PropuestaTruequeRecibida, TruequeAceptadoBilateralmente, EntregaProgramada, PublicacionModerada, RiesgoDetectado). El resto queda solo en el feed in-app.
 - **Justificación:** Evita saturar al usuario con correo por eventos de bajo valor (ej. que su propia donación fue publicada); prioriza correo para acciones que requieren su atención fuera de la sesión activa.
 - **Impacto:** Fase 6 (`N8nWebhookAdapter` solo se invoca para estos 7 eventos).
-- **Estado:** Vigente.
+- **Estado:** Revertida por ADR-047 (2026-07-10) — sin canal de correo, la distinción "alto valor" ya no aplica; los 13 eventos ahora se tratan igual (solo in-app).
 
 ### ADR-030 — Credenciales SMTP configuradas dentro de n8n
 - **Fecha:** 2026-07-07
@@ -266,7 +266,7 @@ Log vivo de decisiones tomadas durante el diseño. Cada entrada indica: fase en 
 - **Decisión:** Las credenciales del proveedor de correo se configuran en el sistema de credenciales propio de n8n, no como variable de entorno del backend.
 - **Justificación:** Mantiene al backend agnóstico del proveedor de correo; simplifica cambiar de proveedor sin tocar código ni `.env` del backend.
 - **Impacto:** Fase 10 (variables de entorno — no se agrega `SMTP_*` al backend).
-- **Estado:** Vigente.
+- **Estado:** Sin objeto — revertida por ADR-047 (2026-07-10), no existe canal de correo ni credenciales SMTP en el proyecto.
 
 ### ADR-031 — El payload del webhook incluye el correo del destinatario
 - **Fecha:** 2026-07-07
@@ -274,6 +274,14 @@ Log vivo de decisiones tomadas durante el diseño. Cada entrada indica: fase en 
 - **Decisión:** El backend resuelve e incluye `usuarioDestinoCorreo` directamente en el payload del webhook, en vez de que n8n consulte la API del backend para obtenerlo.
 - **Justificación:** Evita exponer un endpoint interno sin autenticación hacia n8n; mantiene a n8n como consumidor pasivo del evento, sin necesidad de credenciales hacia el backend.
 - **Impacto:** Fase 6 (`N8nWebhookAdapter`), Fase 9 (Seguridad — reduce superficie de ataque).
+- **Estado:** Sin objeto — revertida por ADR-047 (2026-07-10), no existe webhook.
+
+### ADR-047 — n8n removido del proyecto por completo
+- **Fecha:** 2026-07-10
+- **Origen:** Decisión explícita del usuario tras probar el frontend en navegador — el workflow de n8n (Switch → Set → Send Email, Fase 8 sección 5) nunca se configuró en la UI y se optó por eliminar la integración en vez de dejarla a medio construir.
+- **Decisión:** Se elimina el servicio `n8n` de `docker-compose.yml` (contenedor y volumen `n8n_data` detenidos y borrados), `N8nWebhookAdapter`, `IWebhookNotifier`, `MongooseLogsN8nRepository`, `ILogsN8nRepository` y `N8N_WEBHOOK_URL` (`.env`, `.env.example`, `main/env.ts`). `NotificacionDispatchService` pierde el canal de correo — `notificarConCorreo` se colapsa en `notificar` (todos los eventos quedan solo in-app, sin distinción de "alto valor").
+- **Justificación:** El proyecto no tiene, ni tuvo nunca, correo funcionando (Fase 6 historial: la petición a n8n devolvía 404 porque el workflow no existía) — mantener código y un contenedor Docker completo para una integración nunca terminada y con un ADR de reversión pendiente no aporta valor al alcance académico del MVP; el usuario prefirió una base de código más simple sobre completar la configuración manual de n8n.
+- **Impacto:** `docker-compose.yml` (un servicio menos), `backend/domain/notificaciones/`, `backend/adapters/notificaciones/`, `backend/main/di-container.ts`, `backend/main/env.ts`, revierte ADR-028 (parcialmente)/029/030/031, `docs/fases/fase-08-automatizaciones.md` (marcada como removida, ya no aplica).
 - **Estado:** Vigente.
 
 ---
