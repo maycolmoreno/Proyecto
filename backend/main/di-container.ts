@@ -404,10 +404,10 @@ eventBus.on<{ truequeOrigenId: string; dueñoOrigenId: string; proponenteId: str
 eventBus.on<{ id: string; usuarioId: string }>('TruequeIntercambiado', (p) =>
   notificacionDispatchService.alTruequeIntercambiado(p),
 );
-eventBus.on<{ id: string; tipoOperacion: 'DONACION' | 'TRUEQUE' }>('EntregaProgramada', (p) =>
+eventBus.on<{ id: string; idReferencia: string; tipoOperacion: 'DONACION' | 'TRUEQUE' }>('EntregaProgramada', (p) =>
   notificacionDispatchService.alEntregaProgramada(p),
 );
-eventBus.on<{ id: string; tipoOperacion: 'DONACION' | 'TRUEQUE' }>('EntregaConfirmada', (p) =>
+eventBus.on<{ id: string; idReferencia: string; tipoOperacion: 'DONACION' | 'TRUEQUE' }>('EntregaConfirmada', (p) =>
   notificacionDispatchService.alEntregaConfirmada(p),
 );
 eventBus.on<{ tipoEntidad: 'DONACION' | 'SOLICITUD' | 'TRUEQUE'; entidadId: string; accion: string }>(

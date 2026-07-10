@@ -39,7 +39,8 @@ export class DonacionesController {
   listar = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { page, limit, sort, ...filtros } = listarDonacionesQuerySchema.parse(req.query);
-      const resultado = await this.listarDonaciones.ejecutar({ filtros: { ...filtros, sort }, page, limit });
+      const solicitante = req.usuario ? { id: req.usuario.sub, rol: req.usuario.rol } : undefined;
+      const resultado = await this.listarDonaciones.ejecutar({ filtros: { ...filtros, sort }, page, limit, solicitante });
       res.status(200).json(resultado);
     } catch (error) {
       next(error);

@@ -2,6 +2,11 @@ import type { Donacion } from '../entities/Donacion.js';
 
 export interface DonacionFiltros {
   estado?: string;
+  /** Excluye un estado del resultado (mutuamente excluyente con `estado`) — usado por el caso de
+   * uso para ocultar `CANCELADA` del listado público por defecto (comportamiento de marketplace:
+   * las publicaciones canceladas no aparecen al navegar, salvo que se filtren explícitamente o el
+   * solicitante sea ADMINISTRADOR). */
+  estadoExcluido?: string;
   categoriaId?: string;
   provincia?: string;
   ciudad?: string;

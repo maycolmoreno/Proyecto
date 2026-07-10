@@ -2,6 +2,11 @@ export interface Notificacion {
   id: string;
   usuarioId: string;
   tipo: string;
+  /** Extensión post-cierre (ver docs/PLAN_FRONTEND.md) — discriminador de dominio
+   * ('DONACION'|'SOLICITUD'|'TRUEQUE') que faltaba para poder navegar desde una notificación a la
+   * publicación relacionada; antes solo se guardaba `entidadRelacionada` (el id), ambiguo para
+   * PublicacionModerada/RiesgoDetectado. */
+  entidadTipo: string | null;
   entidadRelacionada: string | null;
   mensaje: string;
   leido: boolean;
@@ -12,6 +17,7 @@ export interface Notificacion {
 export interface CrearNotificacionInput {
   usuarioId: string;
   tipo: string;
+  entidadTipo: string | null;
   entidadRelacionada: string | null;
   mensaje: string;
   canal: string;

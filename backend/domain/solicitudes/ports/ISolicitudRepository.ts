@@ -2,6 +2,8 @@ import type { Solicitud } from '../entities/Solicitud.js';
 
 export interface SolicitudFiltros {
   estado?: string;
+  /** Excluye un estado del resultado (mutuamente excluyente con `estado`) — ver DonacionFiltros. */
+  estadoExcluido?: string;
   categoriaId?: string;
   urgencia?: string;
   provincia?: string;

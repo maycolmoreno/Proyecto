@@ -724,6 +724,16 @@ body {
   background: var(--color-estado-neutral-bg);
 }
 
+.panel-notificaciones__link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.panel-notificaciones__link:hover p {
+  text-decoration: underline;
+}
+
 .panel-notificaciones__fecha {
   font-size: 0.75rem;
   color: var(--color-texto-tenue);

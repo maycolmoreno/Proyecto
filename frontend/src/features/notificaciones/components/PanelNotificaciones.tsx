@@ -1,10 +1,26 @@
+import { Link } from 'react-router-dom';
 import { Button } from '@shared/components/atoms/Button';
 import { useNotificaciones } from '../hooks/useNotificaciones.js';
 import { useMarcarLeido } from '../hooks/useMarcarLeido.js';
+import type { Notificacion } from '../types/index.js';
 
 interface PanelNotificacionesProps {
   abierto: boolean;
   onCerrar: () => void;
+}
+
+const RUTA_POR_ENTIDAD_TIPO: Record<string, string> = {
+  DONACION: '/donaciones',
+  SOLICITUD: '/solicitudes',
+  TRUEQUE: '/trueques',
+};
+
+// `entidadTipo` es null para notificaciones que no llevan a ninguna publicación (ej.
+// UsuarioRegistrado) o para registros anteriores a esta extensión (ver docs/PLAN_FRONTEND.md).
+function rutaDe(n: Notificacion): string | null {
+  if (!n.entidadTipo || !n.entidadRelacionada) return null;
+  const base = RUTA_POR_ENTIDAD_TIPO[n.entidadTipo];
+  return base ? `${base}/${n.entidadRelacionada}` : null;
 }
 
 // Organismo específico de features/notificaciones — panel desplegable bajo la campana del Navbar
@@ -15,6 +31,11 @@ export function PanelNotificaciones({ abierto, onCerrar }: PanelNotificacionesPr
   const marcarLeido = useMarcarLeido();
 
   if (!abierto) return null;
+
+  function alHacerClick(n: Notificacion): void {
+    if (!n.leido) marcarLeido.mutate(n.id);
+    onCerrar();
+  }
 
   return (
     <div className="panel-notificaciones">
@@ -29,20 +50,32 @@ export function PanelNotificaciones({ abierto, onCerrar }: PanelNotificacionesPr
         {notificaciones.data && notificaciones.data.length === 0 ? (
           <p className="estado-lista">No tienes notificaciones.</p>
         ) : null}
-        {(notificaciones.data ?? []).map((n) => (
-          <div
-            key={n.id}
-            className={`panel-notificaciones__item ${n.leido ? '' : 'panel-notificaciones__item--no-leido'}`}
-          >
-            <p>{n.mensaje}</p>
-            <p className="panel-notificaciones__fecha">{new Date(n.fecha).toLocaleString('es-EC')}</p>
-            {!n.leido ? (
-              <Button type="button" variant="secundario" onClick={() => marcarLeido.mutate(n.id)} disabled={marcarLeido.isPending}>
-                Marcar leída
-              </Button>
-            ) : null}
-          </div>
-        ))}
+        {(notificaciones.data ?? []).map((n) => {
+          const ruta = rutaDe(n);
+          const contenido = (
+            <>
+              <p>{n.mensaje}</p>
+              <p className="panel-notificaciones__fecha">{new Date(n.fecha).toLocaleString('es-EC')}</p>
+            </>
+          );
+
+          return (
+            <div key={n.id} className={`panel-notificaciones__item ${n.leido ? '' : 'panel-notificaciones__item--no-leido'}`}>
+              {ruta ? (
+                <Link to={ruta} className="panel-notificaciones__link" onClick={() => alHacerClick(n)}>
+                  {contenido}
+                </Link>
+              ) : (
+                contenido
+              )}
+              {!n.leido ? (
+                <Button type="button" variant="secundario" onClick={() => marcarLeido.mutate(n.id)} disabled={marcarLeido.isPending}>
+                  Marcar leída
+                </Button>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

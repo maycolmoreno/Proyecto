@@ -33,9 +33,20 @@ export class NotificacionDispatchService {
     private readonly usuarioRepository: IUsuarioRepository,
   ) {}
 
-  private notificar(usuarioId: string, tipo: string, entidadRelacionada: string | null, mensaje: string): void {
+  /** `entidadTipo` (extensión post-cierre, ver docs/PLAN_FRONTEND.md) — persiste el discriminador de
+   * dominio junto a `entidadRelacionada` para que el frontend pueda navegar al hacer click en una
+   * notificación (ej. "DONACION" + id → `/donaciones/:id`). Antes de esta extensión solo se
+   * guardaba el id, ambiguo para `PublicacionModerada`/`RiesgoDetectado` (la misma notificación
+   * puede referirse a una Donación, Solicitud o Trueque). */
+  private notificar(
+    usuarioId: string,
+    tipo: string,
+    entidadTipo: string | null,
+    entidadRelacionada: string | null,
+    mensaje: string,
+  ): void {
     this.notificacionRepository
-      .crear({ usuarioId, tipo, entidadRelacionada, mensaje, canal: 'app' })
+      .crear({ usuarioId, tipo, entidadTipo, entidadRelacionada, mensaje, canal: 'app' })
       .catch(() => undefined);
   }
 
@@ -48,7 +59,7 @@ export class NotificacionDispatchService {
     mensaje: string,
     datos: Record<string, unknown>,
   ): Promise<void> {
-    this.notificar(usuarioId, evento, entidadId, mensaje);
+    this.notificar(usuarioId, evento, entidad, entidadId, mensaje);
     const usuario = await this.usuarioRepository.buscarPorId(usuarioId);
     if (!usuario) return;
     await this.webhookNotifier.emitir({
@@ -63,11 +74,11 @@ export class NotificacionDispatchService {
   }
 
   async alUsuarioRegistrado(payload: { id: string; nombre: string }): Promise<void> {
-    this.notificar(payload.id, 'UsuarioRegistrado', payload.id, `¡Bienvenido/a a DonaConnect, ${payload.nombre}!`);
+    this.notificar(payload.id, 'UsuarioRegistrado', null, null, `¡Bienvenido/a a DonaConnect, ${payload.nombre}!`);
   }
 
   async alDonacionPublicada(payload: { id: string; titulo: string; donanteId: string }): Promise<void> {
-    this.notificar(payload.donanteId, 'DonacionPublicada', payload.id, `Tu donación "${payload.titulo}" fue publicada.`);
+    this.notificar(payload.donanteId, 'DonacionPublicada', 'DONACION', payload.id, `Tu donación "${payload.titulo}" fue publicada.`);
   }
 
   /** Correo (Fase 8 sección 4/5) — destinatario: Beneficiario. */
@@ -95,12 +106,12 @@ export class NotificacionDispatchService {
   }
 
   async alSolicitudAtendida(payload: { id: string; beneficiarioId: string }): Promise<void> {
-    this.notificar(payload.beneficiarioId, 'SolicitudAtendida', payload.id, 'Tu solicitud fue atendida completamente.');
+    this.notificar(payload.beneficiarioId, 'SolicitudAtendida', 'SOLICITUD', payload.id, 'Tu solicitud fue atendida completamente.');
     await this.registrarEventoKpi('SolicitudAtendida', 'SOLICITUD', payload.id, payload.beneficiarioId);
   }
 
   async alTruequePublicado(payload: { id: string; titulo: string; usuarioId: string }): Promise<void> {
-    this.notificar(payload.usuarioId, 'TruequePublicado', payload.id, `Tu trueque "${payload.titulo}" fue publicado.`);
+    this.notificar(payload.usuarioId, 'TruequePublicado', 'TRUEQUE', payload.id, `Tu trueque "${payload.titulo}" fue publicado.`);
   }
 
   /** Correo (Fase 8 sección 4/5) — destinatario: dueño del trueque origen. */
@@ -141,29 +152,33 @@ export class NotificacionDispatchService {
   }
 
   async alTruequeIntercambiado(payload: { id: string; usuarioId: string }): Promise<void> {
-    this.notificar(payload.usuarioId, 'TruequeIntercambiado', payload.id, 'Tu trueque se completó exitosamente.');
+    this.notificar(payload.usuarioId, 'TruequeIntercambiado', 'TRUEQUE', payload.id, 'Tu trueque se completó exitosamente.');
     await this.registrarEventoKpi('TruequeIntercambiado', 'TRUEQUE', payload.id, payload.usuarioId);
   }
 
-  /** Correo (Fase 8 sección 4/5) — destinatario: ambas partes involucradas. */
-  async alEntregaProgramada(payload: { id: string; tipoOperacion: TipoOperacionEntrega }): Promise<void> {
-    const partes = await this.resolverPartesOrigen(payload.tipoOperacion, payload.id);
+  /** Correo (Fase 8 sección 4/5) — destinatario: ambas partes involucradas. `idReferencia` (extensión
+   * post-cierre, ver docs/PLAN_FRONTEND.md) es el id de la Donación/Trueque ORIGEN — antes solo se
+   * recibía el id de la propia Entrega, que no sirve para `resolverPartesOrigen` (bug real: nunca
+   * resolvía ninguna parte, así que esta notificación nunca se generaba) ni para navegar desde el
+   * frontend (no hay ruta `/entregas/:id`). */
+  async alEntregaProgramada(payload: { id: string; idReferencia: string; tipoOperacion: TipoOperacionEntrega }): Promise<void> {
+    const partes = await this.resolverPartesOrigen(payload.tipoOperacion, payload.idReferencia);
     for (const usuarioId of partes) {
       await this.notificarConCorreo(
         usuarioId,
         'EntregaProgramada',
         payload.tipoOperacion,
-        payload.id,
+        payload.idReferencia,
         'Se programó una entrega/retiro.',
         { entregaId: payload.id },
       );
     }
   }
 
-  async alEntregaConfirmada(payload: { id: string; tipoOperacion: TipoOperacionEntrega }): Promise<void> {
-    const partes = await this.resolverPartesOrigen(payload.tipoOperacion, payload.id);
+  async alEntregaConfirmada(payload: { id: string; idReferencia: string; tipoOperacion: TipoOperacionEntrega }): Promise<void> {
+    const partes = await this.resolverPartesOrigen(payload.tipoOperacion, payload.idReferencia);
     for (const usuarioId of partes) {
-      this.notificar(usuarioId, 'EntregaConfirmada', payload.id, 'Tu entrega fue confirmada.');
+      this.notificar(usuarioId, 'EntregaConfirmada', payload.tipoOperacion, payload.idReferencia, 'Tu entrega fue confirmada.');
     }
     await this.registrarEventoKpi('EntregaConfirmada', 'ENTREGA', payload.id, partes[0] ?? null);
   }
@@ -186,7 +201,7 @@ export class NotificacionDispatchService {
   async alRiesgoDetectado(payload: { tipoEntidad: TipoEntidadIA; entidadId: string }): Promise<void> {
     const administradores = await this.usuarioRepository.listarPorRol('ADMINISTRADOR');
     for (const admin of administradores) {
-      this.notificar(admin.id, 'RiesgoDetectado', payload.entidadId, 'Una publicación fue marcada con riesgo por IA.');
+      this.notificar(admin.id, 'RiesgoDetectado', payload.tipoEntidad, payload.entidadId, 'Una publicación fue marcada con riesgo por IA.');
       await this.webhookNotifier.emitir({
         evento: 'RiesgoDetectado',
         entidad: payload.tipoEntidad,

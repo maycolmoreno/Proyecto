@@ -76,7 +76,11 @@ export class PrismaTruequeRepository implements ITruequeRepository {
 
   async listar(filtros: TruequeFiltros, paginacion: Paginacion): Promise<ResultadoPaginado<Trueque>> {
     const where: Prisma.TruequeWhereInput = {
-      ...(filtros.estado ? { estadoTrueque: filtros.estado as EstadoTrueque } : {}),
+      ...(filtros.estado
+        ? { estadoTrueque: filtros.estado as EstadoTrueque }
+        : filtros.estadoExcluido
+          ? { estadoTrueque: { not: filtros.estadoExcluido as EstadoTrueque } }
+          : {}),
       ...(filtros.categoriaId ? { categoriaId: filtros.categoriaId } : {}),
       ...(filtros.desde || filtros.hasta
         ? { fecha: { ...(filtros.desde ? { gte: filtros.desde } : {}), ...(filtros.hasta ? { lte: filtros.hasta } : {}) } }

@@ -14,12 +14,21 @@ export interface ListarTruequesResult {
   meta: { page: number; limit: number; total: number; totalPages: number };
 }
 
-/** GET /trueques — listado público paginado (Fase 4, secciones 7-8). */
+/** GET /trueques — listado público paginado (Fase 4, secciones 7-8).
+ * Comportamiento de marketplace (extensión post-cierre, ver docs/PLAN_FRONTEND.md): `CANCELADO` se
+ * excluye del listado por defecto salvo filtro explícito o solicitante ADMINISTRADOR — ver
+ * ListarDonacionesUseCase para el mismo criterio. */
 export class ListarTruequesUseCase {
   constructor(private readonly truequeRepository: ITruequeRepository) {}
 
   async ejecutar(input: ListarTruequesInput): Promise<ListarTruequesResult> {
-    const { items, total } = await this.truequeRepository.listar(input.filtros, {
+    const esAdmin = input.solicitante?.rol === 'ADMINISTRADOR';
+    const filtros: TruequeFiltros = {
+      ...input.filtros,
+      estadoExcluido: !input.filtros.estado && !esAdmin ? 'CANCELADO' : undefined,
+    };
+
+    const { items, total } = await this.truequeRepository.listar(filtros, {
       page: input.page,
       limit: input.limit,
     });

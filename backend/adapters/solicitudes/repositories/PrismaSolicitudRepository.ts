@@ -86,7 +86,11 @@ export class PrismaSolicitudRepository implements ISolicitudRepository {
 
   async listar(filtros: SolicitudFiltros, paginacion: Paginacion): Promise<ResultadoPaginado<Solicitud>> {
     const where: Prisma.SolicitudWhereInput = {
-      ...(filtros.estado ? { estadoSolicitud: filtros.estado as EstadoSolicitud } : {}),
+      ...(filtros.estado
+        ? { estadoSolicitud: filtros.estado as EstadoSolicitud }
+        : filtros.estadoExcluido
+          ? { estadoSolicitud: { not: filtros.estadoExcluido as EstadoSolicitud } }
+          : {}),
       ...(filtros.categoriaId ? { categoriaId: filtros.categoriaId } : {}),
       ...(filtros.urgencia ? { urgencia: filtros.urgencia as Urgencia } : {}),
       ...(filtros.provincia || filtros.ciudad

@@ -55,7 +55,11 @@ export class PrismaDonacionRepository implements IDonacionRepository {
 
   async listar(filtros: DonacionFiltros, paginacion: Paginacion): Promise<ResultadoPaginado<Donacion>> {
     const where: Prisma.DonacionWhereInput = {
-      ...(filtros.estado ? { estadoDonacion: filtros.estado as EstadoDonacion } : {}),
+      ...(filtros.estado
+        ? { estadoDonacion: filtros.estado as EstadoDonacion }
+        : filtros.estadoExcluido
+          ? { estadoDonacion: { not: filtros.estadoExcluido as EstadoDonacion } }
+          : {}),
       ...(filtros.categoriaId ? { categoriaId: filtros.categoriaId } : {}),
       ...(filtros.requiereRetiro !== undefined ? { requiereRetiro: filtros.requiereRetiro } : {}),
       ...(filtros.provincia || filtros.ciudad

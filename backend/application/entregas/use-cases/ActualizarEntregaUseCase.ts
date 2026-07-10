@@ -46,7 +46,13 @@ export class ActualizarEntregaUseCase {
     // Sprint 5 — al confirmar, cierra el aggregate origen a su estado terminal positivo (gap de
     // Sprints 2-3, ver fase-06-backend.md historial).
     if (input.confirmar) {
-      this.eventBus.emit('EntregaConfirmada', { id: entrega.id, tipoOperacion: entrega.tipoOperacion });
+      // Mismo bug corregido que en EntregaCoordinacionService (ver historial) — `idReferencia` es
+      // lo que `resolverPartesOrigen` necesita, no el id de la propia Entrega.
+      this.eventBus.emit('EntregaConfirmada', {
+        id: entrega.id,
+        idReferencia: entrega.idReferencia,
+        tipoOperacion: entrega.tipoOperacion,
+      });
       await this.cierreOrigenService.cerrarOrigen(entrega);
     }
 

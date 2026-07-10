@@ -2,6 +2,8 @@ import type { Trueque } from '../entities/Trueque.js';
 
 export interface TruequeFiltros {
   estado?: string;
+  /** Excluye un estado del resultado (mutuamente excluyente con `estado`) — ver DonacionFiltros. */
+  estadoExcluido?: string;
   categoriaId?: string;
   desde?: Date;
   hasta?: Date;

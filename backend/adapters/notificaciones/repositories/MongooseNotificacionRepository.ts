@@ -8,6 +8,9 @@ import type {
 const notificacionSchema = new Schema({
   usuarioId: { type: String, required: true, index: true },
   tipo: { type: String, required: true },
+  // Extensión post-cierre (ver docs/PLAN_FRONTEND.md) — documentos anteriores a esta extensión no
+  // tienen el campo; `default: null` cubre tanto los nuevos registros como la lectura de los viejos.
+  entidadTipo: { type: String, default: null },
   entidadRelacionada: { type: String, default: null },
   mensaje: { type: String, required: true },
   leido: { type: Boolean, required: true, default: false },
@@ -24,6 +27,7 @@ function toDomain(doc: HydratedDocument<NotificacionDoc>): Notificacion {
     id: doc._id.toString(),
     usuarioId: doc.usuarioId,
     tipo: doc.tipo,
+    entidadTipo: doc.entidadTipo ?? null,
     entidadRelacionada: doc.entidadRelacionada ?? null,
     mensaje: doc.mensaje,
     leido: doc.leido,

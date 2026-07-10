@@ -29,7 +29,16 @@ export class EntregaCoordinacionService {
       modalidad,
     });
     await this.entregaRepository.crear(entrega);
-    this.eventBus.emit('EntregaProgramada', { id: entrega.id, tipoOperacion: entrega.tipoOperacion });
+    // Bug real encontrado y corregido (ver docs/PLAN_FRONTEND.md, extensión post-cierre): el payload
+    // solo traía `entrega.id` (id de la propia Entrega). `resolverPartesOrigen` en
+    // NotificacionDispatchService espera el id de la Donación/Trueque ORIGEN (`idReferencia`), no el
+    // de la Entrega — sin este campo, la búsqueda de partes siempre fallaba en silencio y
+    // EntregaProgramada nunca generaba ninguna notificación real desde que se construyó en Sprint 5.
+    this.eventBus.emit('EntregaProgramada', {
+      id: entrega.id,
+      idReferencia: entrega.idReferencia,
+      tipoOperacion: entrega.tipoOperacion,
+    });
     return entrega;
   }
 }
