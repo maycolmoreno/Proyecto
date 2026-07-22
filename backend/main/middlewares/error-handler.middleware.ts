@@ -12,7 +12,7 @@ import { CategoriaNoEncontradaError } from '@application/categorias/use-cases/Ac
 import { CategoriaInvalidaError } from '@application/donaciones/use-cases/PublicarDonacionUseCase.js';
 import { DonacionNoEncontradaError } from '@application/donaciones/use-cases/ObtenerDonacionUseCase.js';
 import { NoEsDueñoDeLaDonacionError } from '@application/donaciones/use-cases/ActualizarDonacionUseCase.js';
-import { DonacionYaFinalizadaError } from '@domain/donaciones/entities/Donacion.js';
+import { DonacionYaFinalizadaError, DonacionNoDisponibleError } from '@domain/donaciones/entities/Donacion.js';
 import { ArchivoInvalidoError } from '@domain/donaciones/ports/ICloudStorage.js';
 import { CloudinaryNoConfiguradoError } from '@adapters/donaciones/external/CloudinariaAdapter.js';
 import { CategoriaInvalidaError as CategoriaInvalidaSolicitudError } from '@application/solicitudes/use-cases/CrearSolicitudUseCase.js';
@@ -43,6 +43,7 @@ import {
   TruequeOfrecidoInvalidoError,
   NoEsDueñoDelTruequeOfrecidoError,
   OrigenIgualAOfrecidoError,
+  TruequeOfrecidoNoDisponibleError,
 } from '@application/trueques/use-cases/ProponerTruequeUseCase.js';
 import { NoEsDueñoDelTruequeOrigenError } from '@application/trueques/use-cases/ResponderPropuestaUseCase.js';
 import {
@@ -52,8 +53,9 @@ import {
   PropuestaNoEncontradaEnTruequeError,
   PropuestaYaRechazadaError,
   PropuestaYaAceptadaError,
+  TruequeYaComprometidoError,
 } from '@domain/trueques/entities/Trueque.js';
-import { IAProviderNoConfiguradoError } from '@adapters/ia/external/ClaudeAdapter.js';
+import { IAProviderNoConfiguradoError, IARespuestaInvalidaError } from '@adapters/ia/external/ClaudeAdapter.js';
 import { EntidadInvalidaParaMatchingError } from '@domain/ia/services/MatchingService.js';
 import {
   ConversacionNoEncontradaError,
@@ -138,6 +140,7 @@ export function errorHandlerMiddleware(err: unknown, req: Request, res: Response
     err instanceof NoPuedeProponerSobrePropioTruequeError ||
     err instanceof TruequeOfrecidoInvalidoError ||
     err instanceof OrigenIgualAOfrecidoError ||
+    err instanceof TruequeOfrecidoNoDisponibleError ||
     err instanceof NoPuedeEnviarseMensajeAsiMismoError
   ) {
     res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: err.message } });
@@ -159,7 +162,13 @@ export function errorHandlerMiddleware(err: unknown, req: Request, res: Response
     return;
   }
 
-  if (err instanceof OfertaDuplicadaError || err instanceof PropuestaDuplicadaError || err instanceof PropuestaYaAceptadaError) {
+  if (
+    err instanceof OfertaDuplicadaError ||
+    err instanceof PropuestaDuplicadaError ||
+    err instanceof PropuestaYaAceptadaError ||
+    err instanceof DonacionNoDisponibleError ||
+    err instanceof TruequeYaComprometidoError
+  ) {
     res.status(409).json({ error: { code: 'CONFLICT', message: err.message } });
     return;
   }
@@ -179,7 +188,11 @@ export function errorHandlerMiddleware(err: unknown, req: Request, res: Response
     return;
   }
 
-  if (err instanceof CloudinaryNoConfiguradoError || err instanceof IAProviderNoConfiguradoError) {
+  if (
+    err instanceof CloudinaryNoConfiguradoError ||
+    err instanceof IAProviderNoConfiguradoError ||
+    err instanceof IARespuestaInvalidaError
+  ) {
     res.status(503).json({ error: { code: 'SERVICE_UNAVAILABLE', message: err.message } });
     return;
   }

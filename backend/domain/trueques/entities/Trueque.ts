@@ -204,10 +204,6 @@ export class Trueque {
     this.props.estadoTrueque = 'INTERCAMBIADO';
   }
 
-  agregarImagen(url: string): void {
-    this.props.imagenes.push(url);
-  }
-
   /** RF-012/CU-008 — crea la propuesta en PENDIENTE (NO auto-acepta, a diferencia de Sprint 2). */
   agregarPropuestaPendiente(input: { id: string; truequeOfrecidoId: string; usuarioProponenteId: string }): void {
     if (!this.puedeRecibirPropuesta()) throw new TruequeNoAceptaPropuestasError();

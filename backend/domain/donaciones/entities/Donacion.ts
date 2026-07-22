@@ -180,10 +180,6 @@ export class Donacion {
     this.props.estadoDonacion = 'ENTREGADA';
   }
 
-  agregarImagen(url: string): void {
-    this.props.imagenes.push(url);
-  }
-
   /** ADR-019: ubicación exacta (referencia/lat/lng) solo visible al dueño o a un administrador. */
   toJSON(opts: { incluirUbicacionExacta: boolean }): DonacionResponse {
     const ubicacion = this.props.ubicacionRetiro;

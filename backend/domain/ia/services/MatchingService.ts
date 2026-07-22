@@ -55,14 +55,19 @@ export class MatchingService {
       if (!donacion) throw new EntidadInvalidaParaMatchingError();
       const { items } = await this.solicitudRepository.listar(
         { estado: 'ABIERTA', categoriaId: donacion.categoriaId },
-        { page: 1, limit: MAX_CANDIDATOS },
+        { page: 1, limit: MAX_CANDIDATOS + 1 },
       );
       return {
         origen: { id: donacion.id, titulo: donacion.titulo, descripcion: donacion.descripcion },
-        candidatos: items.map((s) => ({
-          candidato: { id: s.id, titulo: s.titulo, descripcion: s.descripcion },
-          urgenciaAlta: s.urgencia === 'ALTA',
-        })),
+        // Excluye las solicitudes del propio donante — mismo criterio que ya aplicaba la rama
+        // TRUEQUE (no tiene sentido sugerir la propia publicación como coincidencia).
+        candidatos: items
+          .filter((s) => s.beneficiarioId !== donacion.donanteId)
+          .slice(0, MAX_CANDIDATOS)
+          .map((s) => ({
+            candidato: { id: s.id, titulo: s.titulo, descripcion: s.descripcion },
+            urgenciaAlta: s.urgencia === 'ALTA',
+          })),
       };
     }
 
@@ -71,14 +76,17 @@ export class MatchingService {
       if (!solicitud) throw new EntidadInvalidaParaMatchingError();
       const { items } = await this.donacionRepository.listar(
         { estado: 'PUBLICADA', categoriaId: solicitud.categoriaId },
-        { page: 1, limit: MAX_CANDIDATOS },
+        { page: 1, limit: MAX_CANDIDATOS + 1 },
       );
       return {
         origen: { id: solicitud.id, titulo: solicitud.titulo, descripcion: solicitud.descripcion },
-        candidatos: items.map((d) => ({
-          candidato: { id: d.id, titulo: d.titulo, descripcion: d.descripcion },
-          urgenciaAlta: false,
-        })),
+        candidatos: items
+          .filter((d) => d.donanteId !== solicitud.beneficiarioId)
+          .slice(0, MAX_CANDIDATOS)
+          .map((d) => ({
+            candidato: { id: d.id, titulo: d.titulo, descripcion: d.descripcion },
+            urgenciaAlta: false,
+          })),
       };
     }
 

@@ -14,6 +14,7 @@ import { useSesion } from '@features/identidad/hooks/useSesion';
 import { useCategorias } from '@features/categorias/hooks/useCategorias';
 import { useClasificar } from '@features/ia/hooks/useClasificar';
 import { useCrearSolicitud } from '../hooks/useCrearSolicitud.js';
+import { ApiError } from '@shared/lib/http-client';
 import type { Urgencia } from '../types/index.js';
 
 // Fase 5, sección 2.4 — 5 pasos (RNF-014). A diferencia de Donación, no hay problema de secuencia
@@ -89,8 +90,9 @@ export function SolicitudWizard(): JSX.Element {
       });
       mostrarToast('Solicitud publicada con éxito.', 'exito');
       navigate(`/solicitudes/${solicitud.id}`);
-    } catch {
-      mostrarToast('No se pudo publicar la solicitud. Intenta de nuevo.', 'error');
+    } catch (error) {
+      const mensaje = error instanceof ApiError ? error.message : 'No se pudo publicar la solicitud. Intenta de nuevo.';
+      mostrarToast(mensaje, 'error');
     }
   }
 

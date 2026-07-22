@@ -54,8 +54,64 @@ describe('BC-Solicitudes — flujo core', () => {
     expect(ofertaRes.body.data.ofertas[0].estado).toBe('ACEPTADA');
 
     // La Entrega se crea síncronamente al aceptar (EntregaCoordinacionService, Fase 6 sección 3).
+    // La donación se compromete (SOLICITADA) al aceptarse la oferta — si se quedara en PUBLICADA
+    // podría comprometerse de nuevo en otra solicitud distinta (bug real corregido: Donacion.comprometer()).
     const entregasRes = await request(app).get(`/api/v1/donaciones/${donacionId}`).expect(200);
-    expect(entregasRes.body.data.estadoDonacion).toBe('PUBLICADA');
+    expect(entregasRes.body.data.estadoDonacion).toBe('SOLICITADA');
+  });
+
+  it('no permite ofertar dos veces con la misma donación ya comprometida en otra solicitud', async () => {
+    const donacionRes = await request(app)
+      .post('/api/v1/donaciones')
+      .set('Authorization', `Bearer ${donante.token}`)
+      .send({
+        titulo: 'Donación comprometida Vitest',
+        descripcion: 'Descripción',
+        categoriaId,
+        estadoObjeto: 'BUEN_ESTADO',
+        requiereRetiro: false,
+      })
+      .expect(201);
+    const donacionId = donacionRes.body.data.id;
+
+    const solicitudARes = await request(app)
+      .post('/api/v1/solicitudes')
+      .set('Authorization', `Bearer ${beneficiario.token}`)
+      .send({
+        titulo: 'Solicitud A Vitest',
+        descripcion: 'Descripción',
+        categoriaId,
+        urgencia: 'MEDIA',
+        ubicacion: { provincia: 'Pichincha', ciudad: 'Quito' },
+      })
+      .expect(201);
+
+    await request(app)
+      .post(`/api/v1/solicitudes/${solicitudARes.body.data.id}/ofertas`)
+      .set('Authorization', `Bearer ${donante.token}`)
+      .send({ donacionId })
+      .expect(201);
+
+    const beneficiarioB = await crearUsuarioDePrueba('BENEFICIARIO');
+    const solicitudBRes = await request(app)
+      .post('/api/v1/solicitudes')
+      .set('Authorization', `Bearer ${beneficiarioB.token}`)
+      .send({
+        titulo: 'Solicitud B Vitest',
+        descripcion: 'Descripción',
+        categoriaId,
+        urgencia: 'MEDIA',
+        ubicacion: { provincia: 'Pichincha', ciudad: 'Quito' },
+      })
+      .expect(201);
+
+    // La misma donación ya está SOLICITADA (comprometida en A) — ofertarla de nuevo en B debe
+    // rechazarse con 409 (DonacionNoDisponibleError), no dejar dos solicitudes "ganadoras".
+    await request(app)
+      .post(`/api/v1/solicitudes/${solicitudBRes.body.data.id}/ofertas`)
+      .set('Authorization', `Bearer ${donante.token}`)
+      .send({ donacionId })
+      .expect(409);
   });
 
   it('rechaza ofertar sobre la propia solicitud', async () => {

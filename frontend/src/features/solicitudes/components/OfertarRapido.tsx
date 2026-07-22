@@ -5,6 +5,7 @@ import { Select } from '@shared/components/atoms/Select';
 import { useToast } from '@shared/components/organisms/ToastProvider';
 import { useMisDonacionesDisponibles } from '../hooks/useMisDonacionesDisponibles';
 import { useCrearOferta } from '../hooks/useCrearOferta';
+import { ApiError } from '@shared/lib/http-client';
 
 interface OfertarRapidoProps {
   solicitudId: string;
@@ -32,8 +33,9 @@ export function OfertarRapido({ solicitudId, categoriaId }: OfertarRapidoProps):
       mostrarToast('Oferta enviada — la solicitud quedó aceptada.', 'exito');
       setAbierto(false);
       setDonacionId('');
-    } catch {
-      mostrarToast('No se pudo enviar la oferta.', 'error');
+    } catch (error) {
+      const mensaje = error instanceof ApiError ? error.message : 'No se pudo enviar la oferta.';
+      mostrarToast(mensaje, 'error');
     }
   }
 

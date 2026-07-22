@@ -11,6 +11,7 @@ import { useCancelarDonacion } from '@features/donaciones/hooks/useCancelarDonac
 import { useImagenesDonacion } from '@features/donaciones/hooks/useImagenesDonacion';
 import { CoordinacionEntrega } from '@features/entregas/components/CoordinacionEntrega';
 import { MatchesSugeridos } from '@features/ia/components/MatchesSugeridos';
+import { ApiError } from '@shared/lib/http-client';
 
 export function DonacionDetallePage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
@@ -33,8 +34,9 @@ export function DonacionDetallePage(): JSX.Element {
       mostrarToast('Donación cancelada.', 'exito');
       setModalCancelarAbierto(false);
       navigate('/donaciones');
-    } catch {
-      mostrarToast('No se pudo cancelar la donación.', 'error');
+    } catch (error) {
+      const mensaje = error instanceof ApiError ? error.message : 'No se pudo cancelar la donación.';
+      mostrarToast(mensaje, 'error');
     }
   }
 

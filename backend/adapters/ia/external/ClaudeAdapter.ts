@@ -1,6 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import {
   IAProviderNoConfiguradoError,
+  IARespuestaInvalidaError,
+  parsearJSONDeIA,
   type IIAProvider,
   type MensajeChat,
   type ClasificacionInput,
@@ -10,7 +12,7 @@ import {
   type EvaluarRiesgoResultado,
 } from '@domain/ia/ports/IIAProvider.js';
 
-export { IAProviderNoConfiguradoError };
+export { IAProviderNoConfiguradoError, IARespuestaInvalidaError };
 
 const SYSTEM_PROMPT_CHATBOT = `Rol: Asistente de DonaConnect Ecuador.
 Alcance: orientar sobre donaciones, solicitudes, trueques, categorías, seguridad y funcionamiento de la plataforma.
@@ -99,7 +101,7 @@ export class ClaudeAdapter implements IIAProvider {
       ],
     });
 
-    const resultado = JSON.parse(extraerTexto(response.content)) as Record<string, unknown>;
+    const resultado = parsearJSONDeIA<Record<string, unknown>>(extraerTexto(response.content));
     return {
       categoriaSugerida: String(resultado.categoriaSugerida),
       tituloSugerido: String(resultado.tituloSugerido),
@@ -133,7 +135,7 @@ export class ClaudeAdapter implements IIAProvider {
       ],
     });
 
-    const resultado = JSON.parse(extraerTexto(response.content)) as { score: number; razon: string };
+    const resultado = parsearJSONDeIA<{ score: number; razon: string }>(extraerTexto(response.content));
     return { candidatoId: candidato.id, score: resultado.score, razon: resultado.razon };
   }
 
@@ -165,6 +167,6 @@ export class ClaudeAdapter implements IIAProvider {
       messages: [{ role: 'user', content: `Título: ${titulo}\nDescripción: ${descripcion}` }],
     });
 
-    return JSON.parse(extraerTexto(response.content)) as EvaluarRiesgoResultado;
+    return parsearJSONDeIA<EvaluarRiesgoResultado>(extraerTexto(response.content));
   }
 }

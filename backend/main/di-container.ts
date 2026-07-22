@@ -224,7 +224,7 @@ const crearOfertaUseCase = new CrearOfertaUseCase(
   entregaCoordinacionService,
   eventBus,
 );
-const actualizarOfertaUseCase = new ActualizarOfertaUseCase(solicitudRepository);
+const actualizarOfertaUseCase = new ActualizarOfertaUseCase(solicitudRepository, donacionRepository);
 
 export const solicitudesController = new SolicitudesController(
   crearSolicitudUseCase,

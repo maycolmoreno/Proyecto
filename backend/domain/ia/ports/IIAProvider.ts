@@ -61,3 +61,24 @@ export class IAProviderNoConfiguradoError extends Error {
     this.name = 'IAProviderNoConfiguradoError';
   }
 }
+
+/** Se lanza cuando el proveedor de IA devuelve una respuesta que no se pudo interpretar como el
+ * JSON esperado (ej. truncada por `max_tokens`/`maxOutputTokens`, o el modelo no respetó el
+ * schema). Antes esto se propagaba como un SyntaxError crudo de `JSON.parse`, indistinguible de
+ * cualquier otro bug — un 500 genérico ("Ocurrió un error inesperado") sin pista de la causa real. */
+export class IARespuestaInvalidaError extends Error {
+  constructor() {
+    super('El servicio de inteligencia artificial devolvió una respuesta inválida. Intenta de nuevo.');
+    this.name = 'IARespuestaInvalidaError';
+  }
+}
+
+/** Helper compartido por los adapters de IIAProvider — centraliza el `JSON.parse` defensivo para
+ * no duplicar el mismo try/catch en cada método de cada adapter. */
+export function parsearJSONDeIA<T>(texto: string): T {
+  try {
+    return JSON.parse(texto) as T;
+  } catch {
+    throw new IARespuestaInvalidaError();
+  }
+}

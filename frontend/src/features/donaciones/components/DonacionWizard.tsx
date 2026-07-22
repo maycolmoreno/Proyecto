@@ -15,6 +15,7 @@ import { useCategorias } from '@features/categorias/hooks/useCategorias';
 import { useClasificar } from '@features/ia/hooks/useClasificar';
 import { useCrearDonacion } from '../hooks/useCrearDonacion.js';
 import { donacionesApi } from '../api/donaciones.api.js';
+import { ApiError } from '@shared/lib/http-client';
 import type { EstadoObjeto } from '../types/index.js';
 
 // Fase 5, sección 2.4 — 5 pasos (RNF-014). El backend exige que la Donación exista para firmar
@@ -91,8 +92,13 @@ export function DonacionWizard(): JSX.Element {
 
   async function publicar(): Promise<void> {
     setPublicando(true);
+
+    // Dos try/catch separados a propósito: si la creación falla, no existe nada aún y el usuario
+    // debe reintentar desde el wizard. Si falla la subida de fotos, la Donación YA existe en BD —
+    // mostrar "no se pudo publicar" ahí llevaba a reintentos que duplicaban la publicación.
+    let donacion: Awaited<ReturnType<typeof crearDonacion.mutateAsync>>;
     try {
-      const donacion = await crearDonacion.mutateAsync({
+      donacion = await crearDonacion.mutateAsync({
         titulo,
         descripcion,
         categoriaId,
@@ -100,20 +106,26 @@ export function DonacionWizard(): JSX.Element {
         requiereRetiro,
         ubicacionRetiro: requiereRetiro ? ubicacionRetiro : undefined,
       });
+    } catch (error) {
+      const mensaje = error instanceof ApiError ? error.message : 'No se pudo publicar la donación. Intenta de nuevo.';
+      mostrarToast(mensaje, 'error');
+      setPublicando(false);
+      return;
+    }
 
+    try {
       for (const archivo of archivos) {
         const firma = await donacionesApi.firmarImagen(donacion.id, archivo.type, archivo.size);
         const resultado = await subirACloudinary(firma, archivo);
         await donacionesApi.registrarImagen(donacion.id, resultado.url, resultado.publicId);
       }
-
       mostrarToast('Donación publicada con éxito.', 'exito');
-      navigate(`/donaciones/${donacion.id}`);
     } catch {
-      mostrarToast('No se pudo publicar la donación. Intenta de nuevo.', 'error');
-    } finally {
-      setPublicando(false);
+      mostrarToast('Donación publicada, pero no se pudieron subir todas las fotos. Podés agregarlas desde el detalle.', 'info');
     }
+
+    setPublicando(false);
+    navigate(`/donaciones/${donacion.id}`);
   }
 
   const etiquetasPaso = ['Categoría y título', 'Descripción y estado', 'Fotos', 'Ubicación de retiro', 'Revisión'];

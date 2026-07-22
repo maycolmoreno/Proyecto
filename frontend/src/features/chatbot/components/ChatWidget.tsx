@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Button } from '@shared/components/atoms/Button';
 import { useChatbot } from '../hooks/useChatbot.js';
+import { useToast } from '@shared/components/organisms/ToastProvider';
+import { ApiError } from '@shared/lib/http-client';
 
 // Organismo específico de features/chatbot (Fase 5, sección 3) — ícono flotante visible en todas
 // las páginas autenticadas (embebido en AppShell). Vista completa equivalente en /chatbot
@@ -10,6 +12,7 @@ export function ChatWidget(): JSX.Element {
   const [texto, setTexto] = useState('');
   const [pendiente, setPendiente] = useState<string | null>(null);
   const chatbot = useChatbot();
+  const { mostrarToast } = useToast();
 
   async function enviar(): Promise<void> {
     const textoEnviado = texto.trim();
@@ -18,6 +21,10 @@ export function ChatWidget(): JSX.Element {
     setTexto('');
     try {
       await chatbot.enviar(textoEnviado);
+    } catch (error) {
+      const mensaje = error instanceof ApiError ? error.message : 'No se pudo enviar el mensaje. Intenta de nuevo.';
+      mostrarToast(mensaje, 'error');
+      setTexto(textoEnviado);
     } finally {
       setPendiente(null);
     }

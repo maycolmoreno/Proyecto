@@ -13,6 +13,7 @@ import { useCrearOferta } from '@features/solicitudes/hooks/useCrearOferta';
 import { useRechazarOferta } from '@features/solicitudes/hooks/useRechazarOferta';
 import { CoordinacionEntrega } from '@features/entregas/components/CoordinacionEntrega';
 import { MatchesSugeridos } from '@features/ia/components/MatchesSugeridos';
+import { ApiError } from '@shared/lib/http-client';
 import type { PerfilFuncional } from '@features/identidad/types/index.js';
 
 // Opción D, Fase 3 (docs/DISENO_MODELO_PERFILES.md) — antes ROLES_PUEDEN_OFERTAR con rol.
@@ -48,8 +49,9 @@ export function SolicitudDetallePage(): JSX.Element {
     try {
       await crearOferta.mutateAsync({ donacionId, mensaje: mensaje || undefined });
       mostrarToast('Oferta enviada — la solicitud quedó aceptada.', 'exito');
-    } catch {
-      mostrarToast('No se pudo enviar la oferta.', 'error');
+    } catch (error) {
+      const mensajeError = error instanceof ApiError ? error.message : 'No se pudo enviar la oferta.';
+      mostrarToast(mensajeError, 'error');
     }
   }
 
@@ -57,8 +59,9 @@ export function SolicitudDetallePage(): JSX.Element {
     try {
       await rechazarOferta.mutateAsync(ofertaId);
       mostrarToast('Oferta rechazada — la solicitud vuelve a estar abierta.', 'exito');
-    } catch {
-      mostrarToast('No se pudo rechazar la oferta.', 'error');
+    } catch (error) {
+      const mensajeError = error instanceof ApiError ? error.message : 'No se pudo rechazar la oferta.';
+      mostrarToast(mensajeError, 'error');
     }
   }
 

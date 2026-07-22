@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { Button } from '@shared/components/atoms/Button';
 import { useChatbot } from '@features/chatbot/hooks/useChatbot';
+import { useToast } from '@shared/components/organisms/ToastProvider';
+import { ApiError } from '@shared/lib/http-client';
 
 export function ChatbotPage(): JSX.Element {
   const [texto, setTexto] = useState('');
   const [pendiente, setPendiente] = useState<string | null>(null);
   const chatbot = useChatbot();
+  const { mostrarToast } = useToast();
 
   async function enviar(): Promise<void> {
     const textoEnviado = texto.trim();
@@ -14,6 +17,10 @@ export function ChatbotPage(): JSX.Element {
     setTexto('');
     try {
       await chatbot.enviar(textoEnviado);
+    } catch (error) {
+      const mensaje = error instanceof ApiError ? error.message : 'No se pudo enviar el mensaje. Intenta de nuevo.';
+      mostrarToast(mensaje, 'error');
+      setTexto(textoEnviado);
     } finally {
       setPendiente(null);
     }

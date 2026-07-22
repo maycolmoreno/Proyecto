@@ -1,6 +1,7 @@
 import { GoogleGenAI, type Content } from '@google/genai';
 import {
   IAProviderNoConfiguradoError,
+  parsearJSONDeIA,
   type IIAProvider,
   type MensajeChat,
   type ClasificacionInput,
@@ -101,7 +102,7 @@ export class GeminiAdapter implements IIAProvider {
       },
     });
 
-    const resultado = JSON.parse(response.text ?? '{}') as Record<string, unknown>;
+    const resultado = parsearJSONDeIA<Record<string, unknown>>(response.text ?? '{}');
     return {
       categoriaSugerida: String(resultado.categoriaSugerida),
       tituloSugerido: String(resultado.tituloSugerido),
@@ -136,7 +137,7 @@ export class GeminiAdapter implements IIAProvider {
       },
     });
 
-    const resultado = JSON.parse(response.text ?? '{}') as { score: number; razon: string };
+    const resultado = parsearJSONDeIA<{ score: number; razon: string }>(response.text ?? '{}');
     return { candidatoId: candidato.id, score: resultado.score, razon: resultado.razon };
   }
 
@@ -166,6 +167,6 @@ export class GeminiAdapter implements IIAProvider {
       },
     });
 
-    return JSON.parse(response.text ?? '{}') as EvaluarRiesgoResultado;
+    return parsearJSONDeIA<EvaluarRiesgoResultado>(response.text ?? '{}');
   }
 }

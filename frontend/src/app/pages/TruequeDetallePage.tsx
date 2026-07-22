@@ -15,6 +15,7 @@ import { useResponderPropuesta } from '@features/trueques/hooks/useResponderProp
 import { useImagenesTrueque } from '@features/trueques/hooks/useImagenesTrueque';
 import { CoordinacionEntrega } from '@features/entregas/components/CoordinacionEntrega';
 import { MatchesSugeridos } from '@features/ia/components/MatchesSugeridos';
+import { ApiError } from '@shared/lib/http-client';
 import type { PerfilFuncional } from '@features/identidad/types/index.js';
 
 // Opción D, Fase 3 (docs/DISENO_MODELO_PERFILES.md) — antes ROLES_PUEDEN_PROPONER con rol.
@@ -70,8 +71,9 @@ export function TruequeDetallePage(): JSX.Element {
       mostrarToast('Trueque cancelado.', 'exito');
       setModalCancelarAbierto(false);
       navigate('/trueques');
-    } catch {
-      mostrarToast('No se pudo cancelar el trueque.', 'error');
+    } catch (error) {
+      const mensaje = error instanceof ApiError ? error.message : 'No se pudo cancelar el trueque.';
+      mostrarToast(mensaje, 'error');
     }
   }
 
@@ -80,8 +82,9 @@ export function TruequeDetallePage(): JSX.Element {
       await proponerTrueque.mutateAsync({ truequeOfrecidoId });
       mostrarToast('Propuesta enviada.', 'exito');
       setTruequeOfrecidoId('');
-    } catch {
-      mostrarToast('No se pudo enviar la propuesta.', 'error');
+    } catch (error) {
+      const mensaje = error instanceof ApiError ? error.message : 'No se pudo enviar la propuesta.';
+      mostrarToast(mensaje, 'error');
     }
   }
 
@@ -89,8 +92,9 @@ export function TruequeDetallePage(): JSX.Element {
     try {
       await responderPropuesta.aceptar.mutateAsync(propuestaId);
       mostrarToast('Propuesta aceptada — se creó la coordinación de entrega.', 'exito');
-    } catch {
-      mostrarToast('No se pudo aceptar la propuesta.', 'error');
+    } catch (error) {
+      const mensaje = error instanceof ApiError ? error.message : 'No se pudo aceptar la propuesta.';
+      mostrarToast(mensaje, 'error');
     }
   }
 
@@ -98,8 +102,9 @@ export function TruequeDetallePage(): JSX.Element {
     try {
       await responderPropuesta.rechazar.mutateAsync(propuestaId);
       mostrarToast('Propuesta rechazada.', 'exito');
-    } catch {
-      mostrarToast('No se pudo rechazar la propuesta.', 'error');
+    } catch (error) {
+      const mensaje = error instanceof ApiError ? error.message : 'No se pudo rechazar la propuesta.';
+      mostrarToast(mensaje, 'error');
     }
   }
 

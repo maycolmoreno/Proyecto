@@ -49,14 +49,19 @@ export class ResponderPropuestaUseCase {
     }
 
     if (input.aceptar) {
+      // El lado ofrecido se busca y se muta (en memoria) ANTES de tocar el origen: si ya está
+      // comprometido en otra negociación (marcarEnCoordinacion lanza TruequeYaComprometidoError) o
+      // fue eliminado, el origen no debe quedar marcado ACEPTADA/EN_COORDINACION con una contraparte
+      // inválida. Antes no se validaba esto y dos orígenes distintos podían "ganar" el mismo ofrecido.
+      const truequeOfrecido = await this.truequeRepository.buscarPorId(propuesta.truequeOfrecidoId);
+      if (!truequeOfrecido) {
+        throw new TruequeNoEncontradoError();
+      }
+      truequeOfrecido.marcarEnCoordinacion();
+
       truequeOrigen.aceptarPropuesta(propuestaId);
       await this.truequeRepository.actualizar(truequeOrigen);
-
-      const truequeOfrecido = await this.truequeRepository.buscarPorId(propuesta.truequeOfrecidoId);
-      if (truequeOfrecido) {
-        truequeOfrecido.marcarEnCoordinacion();
-        await this.truequeRepository.actualizar(truequeOfrecido);
-      }
+      await this.truequeRepository.actualizar(truequeOfrecido);
 
       // Destinatarios: ambas partes — el dueño del origen (solicitanteId, quien acepta) y el proponente.
       this.eventBus.emit('TruequeAceptadoBilateralmente', {

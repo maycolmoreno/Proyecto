@@ -73,4 +73,52 @@ describe('BC-Trueques — flujo core', () => {
       .send({ truequeOfrecidoId: ofrecidoRes.body.data.id })
       .expect(400);
   });
+
+  it('no permite comprometer el mismo trueque ofrecido en dos negociaciones aceptadas', async () => {
+    // El mismo `proponente` ofrece SU trueque (ofrecido) como contraparte de dos orígenes distintos
+    // (dueñoA y dueñoB) — antes del fix, aceptar ambas dejaba el ofrecido "ganado" por las dos.
+    const dueñoA = await crearUsuarioDePrueba('DONANTE');
+    const dueñoB = await crearUsuarioDePrueba('DONANTE');
+
+    const origenARes = await request(app)
+      .post('/api/v1/trueques')
+      .set('Authorization', `Bearer ${dueñoA.token}`)
+      .send({ titulo: 'Origen A Vitest', descripcion: 'Descripción', categoriaId, estadoObjeto: 'BUEN_ESTADO' })
+      .expect(201);
+    const origenBRes = await request(app)
+      .post('/api/v1/trueques')
+      .set('Authorization', `Bearer ${dueñoB.token}`)
+      .send({ titulo: 'Origen B Vitest', descripcion: 'Descripción', categoriaId, estadoObjeto: 'BUEN_ESTADO' })
+      .expect(201);
+    const ofrecidoRes = await request(app)
+      .post('/api/v1/trueques')
+      .set('Authorization', `Bearer ${proponente.token}`)
+      .send({ titulo: 'Ofrecido compartido Vitest', descripcion: 'Descripción', categoriaId, estadoObjeto: 'BUEN_ESTADO' })
+      .expect(201);
+    const ofrecidoId = ofrecidoRes.body.data.id;
+
+    const propuestaARes = await request(app)
+      .post(`/api/v1/trueques/${origenARes.body.data.id}/propuestas`)
+      .set('Authorization', `Bearer ${proponente.token}`)
+      .send({ truequeOfrecidoId: ofrecidoId })
+      .expect(201);
+    const propuestaBRes = await request(app)
+      .post(`/api/v1/trueques/${origenBRes.body.data.id}/propuestas`)
+      .set('Authorization', `Bearer ${proponente.token}`)
+      .send({ truequeOfrecidoId: ofrecidoId })
+      .expect(201);
+
+    await request(app)
+      .patch(`/api/v1/trueques/${origenARes.body.data.id}/propuestas/${propuestaARes.body.data.propuestasRecibidas[0].id}`)
+      .set('Authorization', `Bearer ${dueñoA.token}`)
+      .send({ aceptar: true })
+      .expect(200);
+
+    // El ofrecido ya está EN_COORDINACION con A — aceptar B sobre el mismo ofrecido debe rechazarse.
+    await request(app)
+      .patch(`/api/v1/trueques/${origenBRes.body.data.id}/propuestas/${propuestaBRes.body.data.propuestasRecibidas[0].id}`)
+      .set('Authorization', `Bearer ${dueñoB.token}`)
+      .send({ aceptar: true })
+      .expect(409);
+  });
 });

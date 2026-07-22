@@ -94,32 +94,41 @@ export function TruequeWizard(): JSX.Element {
 
   async function publicar(): Promise<void> {
     setPublicando(true);
-    try {
-      const descripcionFinal = queBuscas.trim()
-        ? `${descripcion}\n\n¿Qué busco a cambio?\n${queBuscas.trim()}`
-        : descripcion;
+    const descripcionFinal = queBuscas.trim()
+      ? `${descripcion}\n\n¿Qué busco a cambio?\n${queBuscas.trim()}`
+      : descripcion;
 
-      const trueque = await crearTrueque.mutateAsync({
+    // Dos try/catch separados a propósito (mismo criterio que DonacionWizard): si falla la subida
+    // de fotos, el Trueque YA existe en BD — no debe reportarse como "no se pudo publicar", eso
+    // llevaba a reintentos que duplicaban la publicación.
+    let trueque: Awaited<ReturnType<typeof crearTrueque.mutateAsync>>;
+    try {
+      trueque = await crearTrueque.mutateAsync({
         titulo,
         descripcion: descripcionFinal,
         categoriaId,
         estadoObjeto,
       });
+    } catch (error) {
+      const mensaje = error instanceof ApiError ? error.message : 'No se pudo publicar el trueque. Intenta de nuevo.';
+      mostrarToast(mensaje, 'error');
+      setPublicando(false);
+      return;
+    }
 
+    try {
       for (const archivo of archivos) {
         const firma = await truequesApi.firmarImagen(trueque.id, archivo.type, archivo.size);
         const resultado = await subirACloudinary(firma, archivo);
         await truequesApi.registrarImagen(trueque.id, resultado.url, resultado.publicId);
       }
-
       mostrarToast('Trueque publicado con éxito.', 'exito');
-      setTruequePublicado(trueque);
-    } catch (error) {
-      const mensaje = error instanceof ApiError ? error.message : 'No se pudo publicar el trueque. Intenta de nuevo.';
-      mostrarToast(mensaje, 'error');
-    } finally {
-      setPublicando(false);
+    } catch {
+      mostrarToast('Trueque publicado, pero no se pudieron subir todas las fotos. Podés agregarlas desde el detalle.', 'info');
     }
+
+    setPublicando(false);
+    setTruequePublicado(trueque);
   }
 
   const etiquetasPaso = ['Categoría y título', 'Descripción y estado', 'Fotos', '¿Qué buscas a cambio?', 'Revisión'];
