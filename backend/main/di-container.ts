@@ -33,6 +33,8 @@ import { ActualizarDonacionUseCase } from '@application/donaciones/use-cases/Act
 import { CancelarDonacionUseCase } from '@application/donaciones/use-cases/CancelarDonacionUseCase.js';
 import { FirmarSubidaImagenUseCase } from '@application/donaciones/use-cases/FirmarSubidaImagenUseCase.js';
 import { RegistrarImagenUseCase } from '@application/donaciones/use-cases/RegistrarImagenUseCase.js';
+import { CrearReservaUseCase } from '@application/donaciones/use-cases/CrearReservaUseCase.js';
+import { ResponderReservaUseCase } from '@application/donaciones/use-cases/ResponderReservaUseCase.js';
 import { DonacionesController } from '@adapters/donaciones/controllers/donaciones.controller.js';
 
 import { PrismaAuditoriaRepository } from '@adapters/auditoria/repositories/PrismaAuditoriaRepository.js';
@@ -99,6 +101,12 @@ import { NotificacionDispatchService } from '@domain/notificaciones/services/Not
 import { ListarNotificacionesUseCase } from '@application/notificaciones/use-cases/ListarNotificacionesUseCase.js';
 import { MarcarLeidoUseCase } from '@application/notificaciones/use-cases/MarcarLeidoUseCase.js';
 import { NotificacionesController } from '@adapters/notificaciones/controllers/notificaciones.controller.js';
+
+import { MongooseFavoritoRepository } from '@adapters/favoritos/repositories/MongooseFavoritoRepository.js';
+import { AgregarFavoritoUseCase } from '@application/favoritos/use-cases/AgregarFavoritoUseCase.js';
+import { QuitarFavoritoUseCase } from '@application/favoritos/use-cases/QuitarFavoritoUseCase.js';
+import { ListarFavoritosUseCase } from '@application/favoritos/use-cases/ListarFavoritosUseCase.js';
+import { FavoritosController } from '@adapters/favoritos/controllers/favoritos.controller.js';
 
 import { DashboardQueryService } from '@domain/dashboard/services/DashboardQueryService.js';
 import { ObtenerDashboardImpactoUseCase } from '@application/dashboard/use-cases/ObtenerDashboardImpactoUseCase.js';
@@ -191,6 +199,15 @@ const cancelarDonacionUseCase = new CancelarDonacionUseCase(donacionRepository);
 const firmarSubidaImagenUseCase = new FirmarSubidaImagenUseCase(donacionRepository, cloudStorage);
 const registrarImagenUseCase = new RegistrarImagenUseCase(donacionRepository, imagenRepository);
 
+// BC-Entregas (Supporting — consumido por Solicitudes y, desde Sprint 3, por Trueques)
+const entregaRepository = new PrismaEntregaRepository(prisma);
+const entregaCoordinacionService = new EntregaCoordinacionService(entregaRepository, eventBus);
+
+// "Quiero este artículo" — necesita entregaCoordinacionService (ya definido arriba), por eso
+// donacionesController se construye recién acá, después del bloque BC-Entregas.
+const crearReservaUseCase = new CrearReservaUseCase(donacionRepository, eventBus);
+const responderReservaUseCase = new ResponderReservaUseCase(donacionRepository, entregaCoordinacionService, eventBus);
+
 export const donacionesController = new DonacionesController(
   publicarDonacionUseCase,
   listarDonacionesUseCase,
@@ -199,11 +216,9 @@ export const donacionesController = new DonacionesController(
   cancelarDonacionUseCase,
   firmarSubidaImagenUseCase,
   registrarImagenUseCase,
+  crearReservaUseCase,
+  responderReservaUseCase,
 );
-
-// BC-Entregas (Supporting — consumido por Solicitudes y, desde Sprint 3, por Trueques)
-const entregaRepository = new PrismaEntregaRepository(prisma);
-const entregaCoordinacionService = new EntregaCoordinacionService(entregaRepository, eventBus);
 
 // BC-Solicitudes
 const solicitudRepository = new PrismaSolicitudRepository(prisma);
@@ -307,7 +322,7 @@ const conversacionChatbotRepository = new MongooseConversacionChatbotRepository(
 const analisisIARepository = new MongooseAnalisisIARepository();
 
 const chatbotOrquestacionService = new ChatbotOrquestacionService(iaProvider, conversacionChatbotRepository);
-const clasificacionService = new ClasificacionService(iaProvider, categoriaRepository);
+const clasificacionService = new ClasificacionService(iaProvider);
 const matchingService = new MatchingService(iaProvider, donacionRepository, solicitudRepository, truequeRepository);
 const moderacionIAService = new ModeracionIAService(iaProvider, analisisIARepository, eventBus);
 
@@ -388,10 +403,28 @@ const notificacionDispatchService = new NotificacionDispatchService(
   solicitudRepository,
   truequeRepository,
   usuarioRepository,
+  matchingService,
 );
 const listarNotificacionesUseCase = new ListarNotificacionesUseCase(notificacionRepository);
 const marcarLeidoUseCase = new MarcarLeidoUseCase(notificacionRepository);
 export const notificacionesController = new NotificacionesController(listarNotificacionesUseCase, marcarLeidoUseCase);
+
+// BC-Favoritos — a diferencia de PublicacionIndexService/NotificacionDispatchService, NO es un
+// listener del Event Bus: "guardar" es una acción directa del usuario, no una proyección de eventos.
+const favoritoRepository = new MongooseFavoritoRepository();
+const agregarFavoritoUseCase = new AgregarFavoritoUseCase(
+  favoritoRepository,
+  donacionRepository,
+  solicitudRepository,
+  truequeRepository,
+);
+const quitarFavoritoUseCase = new QuitarFavoritoUseCase(favoritoRepository);
+const listarFavoritosUseCase = new ListarFavoritosUseCase(favoritoRepository);
+export const favoritosController = new FavoritosController(
+  agregarFavoritoUseCase,
+  quitarFavoritoUseCase,
+  listarFavoritosUseCase,
+);
 
 // Dashboard (CU-012/RF-019, Fase 2: "BC-Notificaciones/KPI transversal").
 const dashboardQueryService = new DashboardQueryService(
@@ -432,8 +465,20 @@ eventBus.on<{ id: string; nombre: string }>('UsuarioRegistrado', (p) => notifica
 eventBus.on<{ id: string; titulo: string; donanteId: string }>('DonacionPublicada', (p) =>
   notificacionDispatchService.alDonacionPublicada(p),
 );
+eventBus.on<{ donacionId: string; tituloDonacion: string; donanteId: string }>('ReservaDonacionCreada', (p) =>
+  notificacionDispatchService.alReservaDonacionCreada(p),
+);
+eventBus.on<{ donacionId: string; usuarioInteresadoId: string }>('ReservaDonacionAceptada', (p) =>
+  notificacionDispatchService.alReservaDonacionAceptada(p),
+);
+eventBus.on<{ donacionId: string; usuarioInteresadoId: string }>('ReservaDonacionRechazada', (p) =>
+  notificacionDispatchService.alReservaDonacionRechazada(p),
+);
 eventBus.on<{ solicitudId: string; beneficiarioId: string }>('OfertaRecibida', (p) =>
   notificacionDispatchService.alOfertaRecibida(p),
+);
+eventBus.on<{ id: string; titulo: string }>('SolicitudCreada', (p) =>
+  notificacionDispatchService.alSolicitudCreadaBuscarCoincidencias(p),
 );
 eventBus.on<{ id: string; beneficiarioId: string }>('SolicitudAceptadaPorDonante', (p) =>
   notificacionDispatchService.alSolicitudAceptadaPorDonante(p),

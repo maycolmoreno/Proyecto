@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { Button } from '@shared/components/atoms/Button';
+import { Avatar } from '@shared/components/atoms/Avatar';
+import { formatearHora, formatearEncabezadoDia, mismoDia } from '@shared/lib/fecha';
 import { useSesion } from '@features/identidad/hooks/useSesion';
 import { useUsuarioPublico } from '@features/identidad/hooks/useUsuarioPublico';
 import { useConversacion } from '../hooks/useConversacion.js';
@@ -33,22 +35,51 @@ export function ConversationThread({ otroParticipanteId }: ConversationThreadPro
   }
 
   const mensajes = conversacion.data?.mensajes ?? [];
+  const nombreOtro = otroUsuario.data?.nombre ?? 'Conversación';
+  const ahoraISO = new Date().toISOString();
 
   return (
     <div>
-      <h2>{otroUsuario.data?.nombre ?? 'Conversación'}</h2>
+      <div className="conversacion-hilo__encabezado">
+        <Avatar nombre={nombreOtro} />
+        <h2>{nombreOtro}</h2>
+      </div>
       <div className="chat-widget__mensajes chat-widget__mensajes--pagina">
         {conversacion.isLoading ? <p className="estado-lista">Cargando…</p> : null}
-        {mensajes.length === 0 && !pendiente ? <p className="estado-lista">Aún no hay mensajes — escribe el primero.</p> : null}
-        {mensajes.map((m, i) => (
-          <p
-            key={i}
-            className={`chat-widget__mensaje chat-widget__mensaje--${m.autorId === sesion.data?.id ? 'usuario' : 'bot'}`}
-          >
-            {m.texto}
-          </p>
-        ))}
-        {pendiente ? <p className="chat-widget__mensaje chat-widget__mensaje--usuario">{pendiente}</p> : null}
+        {mensajes.length === 0 && !pendiente && !conversacion.isLoading ? (
+          <div className="chat-widget__bienvenida">
+            <span className="chat-widget__bienvenida-icono" aria-hidden="true">
+              👋
+            </span>
+            <p className="chat-widget__bienvenida-texto">Aún no hay mensajes. Escribe el primero para iniciar la conversación con {nombreOtro}.</p>
+          </div>
+        ) : null}
+        {mensajes.map((m, i) => {
+          // Separador de día (ref. MDB Chat) — se muestra antes del primer mensaje del día y cada
+          // vez que la fecha cambia respecto al mensaje anterior.
+          const mensajeAnterior = mensajes[i - 1];
+          const mostrarSeparador = !mensajeAnterior || !mismoDia(mensajeAnterior.fecha, m.fecha);
+          return (
+            <Fragment key={i}>
+              {mostrarSeparador ? <p className="chat-widget__separador-dia">{formatearEncabezadoDia(m.fecha)}</p> : null}
+              <div className={`chat-widget__mensaje chat-widget__mensaje--${m.autorId === sesion.data?.id ? 'usuario' : 'bot'}`}>
+                <p className="chat-widget__mensaje-texto">{m.texto}</p>
+                <span className="chat-widget__mensaje-hora">{formatearHora(m.fecha)}</span>
+              </div>
+            </Fragment>
+          );
+        })}
+        {pendiente ? (
+          <>
+            {(!mensajes.length || !mismoDia(mensajes[mensajes.length - 1]!.fecha, ahoraISO)) ? (
+              <p className="chat-widget__separador-dia">{formatearEncabezadoDia(ahoraISO)}</p>
+            ) : null}
+            <div className="chat-widget__mensaje chat-widget__mensaje--usuario">
+              <p className="chat-widget__mensaje-texto">{pendiente}</p>
+              <span className="chat-widget__mensaje-hora">{formatearHora(ahoraISO)}</span>
+            </div>
+          </>
+        ) : null}
       </div>
       <div className="chat-widget__entrada">
         <input

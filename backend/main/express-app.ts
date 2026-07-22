@@ -17,6 +17,7 @@ import { mensajeriaRouter } from './routes/mensajeria.routes.js';
 import { notificacionesRouter } from './routes/notificaciones.routes.js';
 import { dashboardRouter } from './routes/dashboard.routes.js';
 import { publicacionesRouter } from './routes/publicaciones.routes.js';
+import { favoritosRouter } from './routes/favoritos.routes.js';
 import { errorHandlerMiddleware } from './middlewares/error-handler.middleware.js';
 
 export const app = express();
@@ -49,6 +50,7 @@ app.use('/api/v1', mensajeriaRouter);
 app.use('/api/v1', notificacionesRouter);
 app.use('/api/v1', dashboardRouter);
 app.use('/api/v1', publicacionesRouter);
+app.use('/api/v1', favoritosRouter);
 
 app.use(errorHandlerMiddleware);
 

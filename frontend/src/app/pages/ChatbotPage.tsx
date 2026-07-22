@@ -4,14 +4,23 @@ import { useChatbot } from '@features/chatbot/hooks/useChatbot';
 import { useToast } from '@shared/components/organisms/ToastProvider';
 import { ApiError } from '@shared/lib/http-client';
 
+// Puntos de partida para quien no sabe qué preguntar — cubren los 3 flujos principales (RF-009,
+// RF-016, RF-tipo trueque) más el más frecuente en soporte (cómo coordinar la entrega).
+const PREGUNTAS_SUGERIDAS = [
+  '¿Cómo dono un objeto?',
+  '¿Cómo pido ayuda?',
+  '¿Qué es un trueque?',
+  '¿Cómo coordino la entrega?',
+];
+
 export function ChatbotPage(): JSX.Element {
   const [texto, setTexto] = useState('');
   const [pendiente, setPendiente] = useState<string | null>(null);
   const chatbot = useChatbot();
   const { mostrarToast } = useToast();
 
-  async function enviar(): Promise<void> {
-    const textoEnviado = texto.trim();
+  async function enviar(textoForzado?: string): Promise<void> {
+    const textoEnviado = (textoForzado ?? texto).trim();
     if (!textoEnviado) return;
     setPendiente(textoEnviado);
     setTexto('');
@@ -31,8 +40,22 @@ export function ChatbotPage(): JSX.Element {
       <h1>Asistente DonaConnect</h1>
       <div className="chat-widget__mensajes chat-widget__mensajes--pagina">
         {chatbot.cargandoHistorial ? <p className="estado-lista">Cargando…</p> : null}
-        {chatbot.mensajes.length === 0 && !chatbot.cargandoHistorial ? (
-          <p className="estado-lista">Pregúntame sobre cómo donar, solicitar o hacer trueques.</p>
+        {chatbot.mensajes.length === 0 && !chatbot.cargandoHistorial && !pendiente ? (
+          <div className="chat-widget__bienvenida">
+            <span className="chat-widget__bienvenida-icono" aria-hidden="true">
+              🤖
+            </span>
+            <p className="chat-widget__bienvenida-texto">
+              Soy el asistente de DonaConnect. Pregúntame sobre cómo donar, pedir ayuda o hacer trueques.
+            </p>
+            <div className="chips">
+              {PREGUNTAS_SUGERIDAS.map((pregunta) => (
+                <button key={pregunta} type="button" className="chip" onClick={() => enviar(pregunta)}>
+                  {pregunta}
+                </button>
+              ))}
+            </div>
+          </div>
         ) : null}
         {chatbot.mensajes.map((m, i) => (
           <p key={i} className={`chat-widget__mensaje chat-widget__mensaje--${m.rol}`}>
@@ -51,7 +74,7 @@ export function ChatbotPage(): JSX.Element {
           placeholder="Escribe tu pregunta…"
           disabled={chatbot.enviando}
         />
-        <Button type="button" onClick={enviar} disabled={chatbot.enviando || !texto.trim()}>
+        <Button type="button" onClick={() => enviar()} disabled={chatbot.enviando || !texto.trim()}>
           Enviar
         </Button>
       </div>

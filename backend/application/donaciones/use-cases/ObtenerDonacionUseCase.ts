@@ -19,9 +19,9 @@ export class ObtenerDonacionUseCase {
       throw new DonacionNoEncontradaError();
     }
 
-    const incluirUbicacionExacta =
-      !!solicitante && (solicitante.rol === 'ADMINISTRADOR' || donacion.esDueño(solicitante.id));
+    const esAdmin = solicitante?.rol === 'ADMINISTRADOR';
+    const incluirUbicacionExacta = !!solicitante && (esAdmin || donacion.esDueño(solicitante.id));
 
-    return donacion.toJSON({ incluirUbicacionExacta });
+    return donacion.toJSON({ incluirUbicacionExacta, solicitanteId: solicitante?.id, esAdmin });
   }
 }

@@ -6,13 +6,14 @@ export interface MensajeChat {
 export interface ClasificacionInput {
   titulo: string;
   descripcion: string;
-  categoriasVigentes: string[];
   /** La prioridad solo aplica a solicitudes (Fase 7, sección 3). */
   esSolicitud: boolean;
 }
 
+// La IA ya no sugiere categoría (decisión del usuario 2026-07-21): clasificaba mal objetos
+// ambiguos (ej. una escalera como "Juguetes") y forzaba corregirlo desde el detalle. La categoría
+// la elige siempre la persona, en el paso 1 del wizard.
 export interface ClasificacionResultado {
-  categoriaSugerida: string;
   tituloSugerido: string;
   descripcionSugerida: string;
   prioridadSugerida: 'BAJA' | 'MEDIA' | 'ALTA' | null;

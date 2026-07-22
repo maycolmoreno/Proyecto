@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useSesion } from '@features/identidad/hooks/useSesion';
 import { useActualizarPerfiles } from '@features/identidad/hooks/useActualizarPerfiles';
 import { useActualizarUbicacion } from '@features/identidad/hooks/useActualizarUbicacion';
+import { useMisPublicaciones } from '@features/publicaciones/hooks/useMisPublicaciones';
+import { DashboardStatTile } from '@features/dashboard/components/DashboardStatTile';
 import { useToast } from '@shared/components/organisms/ToastProvider';
 import { Button } from '@shared/components/atoms/Button';
 import { Avatar } from '@shared/components/atoms/Avatar';
@@ -30,6 +32,7 @@ export function PerfilPage(): JSX.Element {
   const [ubicacion, setUbicacion] = useState<UbicacionInput>(UBICACION_VACIA);
   const actualizarPerfiles = useActualizarPerfiles();
   const actualizarUbicacion = useActualizarUbicacion();
+  const publicaciones = useMisPublicaciones();
   const { mostrarToast } = useToast();
 
   useEffect(() => {
@@ -44,6 +47,14 @@ export function PerfilPage(): JSX.Element {
   if (!sesion.data) return <p className="estado-lista">No se pudo cargar tu perfil.</p>;
 
   const usuario = sesion.data;
+  // Trayectoria en la comunidad (auditoría de espacio muerto 2026-07-21) — reutiliza el mismo feed
+  // de useMisPublicaciones (MisPublicacionesPage), sin pedir un endpoint nuevo. Solo cuenta lo que
+  // efectivamente se completó, no todo lo publicado (eso ya se ve en /publicaciones/mias).
+  const donacionesEntregadas = (publicaciones.data ?? []).filter((p) => p.tipo === 'DONACION' && p.estado === 'ENTREGADA').length;
+  const solicitudesAtendidas = (publicaciones.data ?? []).filter((p) => p.tipo === 'SOLICITUD' && p.estado === 'ATENDIDA').length;
+  const truequesIntercambiados = (publicaciones.data ?? []).filter(
+    (p) => p.tipo === 'TRUEQUE' && p.estado === 'INTERCAMBIADO',
+  ).length;
 
   function alternarPerfil(perfil: PerfilFuncional): void {
     setPerfilesSeleccionados((actuales) =>
@@ -78,6 +89,19 @@ export function PerfilPage(): JSX.Element {
           <p className="perfil-encabezado__correo">{usuario.correo}</p>
         </div>
       </div>
+
+      {publicaciones.data ? (
+        <div className="grid-publicaciones perfil-stats">
+          <DashboardStatTile icono="🎁" valor={donacionesEntregadas} etiqueta="Donaciones entregadas" to="/publicaciones/mias" />
+          <DashboardStatTile icono="🙏" valor={solicitudesAtendidas} etiqueta="Solicitudes atendidas" to="/publicaciones/mias" />
+          <DashboardStatTile
+            icono="🔄"
+            valor={truequesIntercambiados}
+            etiqueta="Trueques intercambiados"
+            to="/publicaciones/mias"
+          />
+        </div>
+      ) : null}
 
       <div role="tablist" aria-label="Secciones de perfil" className="tabs">
         <button

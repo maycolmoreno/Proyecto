@@ -1,6 +1,12 @@
 import { httpClient, type RespuestaPaginada } from '@shared/lib/http-client';
 import type { FirmaSubida } from '@shared/lib/cloudinary';
-import type { Donacion, CrearDonacionInput, ActualizarDonacionInput, ListarDonacionesFiltros } from '../types/index.js';
+import type {
+  Donacion,
+  CrearDonacionInput,
+  ActualizarDonacionInput,
+  ListarDonacionesFiltros,
+  CrearReservaInput,
+} from '../types/index.js';
 
 function aQueryString(filtros: ListarDonacionesFiltros): string {
   const params = new URLSearchParams();
@@ -22,6 +28,12 @@ export const donacionesApi = {
     httpClient.post<FirmaSubida>(`/donaciones/${id}/imagenes/firma`, { mimeType, tamanoBytes }),
   registrarImagen: (id: string, url: string, publicId: string) =>
     httpClient.post<{ imagenes: string[] }>(`/donaciones/${id}/imagenes`, { url, publicId }),
+  reservar: (id: string, input: CrearReservaInput) => httpClient.post<Donacion>(`/donaciones/${id}/reservas`, input),
+  // PATCH /donaciones/:id/reservas/:reservaId — solo el donante (RF nuevo, "Quiero este artículo").
+  aceptarReserva: (id: string, reservaId: string) =>
+    httpClient.patch<Donacion>(`/donaciones/${id}/reservas/${reservaId}`, { aceptar: true }),
+  rechazarReserva: (id: string, reservaId: string) =>
+    httpClient.patch<Donacion>(`/donaciones/${id}/reservas/${reservaId}`, { rechazar: true }),
 };
 
 export type { RespuestaPaginada };

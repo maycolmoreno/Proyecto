@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { PublicacionCard } from '@shared/components/molecules/PublicacionCard';
 import { FiltroPanel } from '@shared/components/organisms/FiltroPanel';
 import { Button } from '@shared/components/atoms/Button';
+import { EstadoVacio } from '@shared/components/molecules/EstadoVacio';
+import { PROVINCIAS_ECUADOR } from '@shared/lib/ubicacion';
 import { useSesion } from '@features/identidad/hooks/useSesion';
 import { useCategorias } from '@features/categorias/hooks/useCategorias';
 import { useSolicitudes } from '@features/solicitudes/hooks/useSolicitudes';
 import { OfertarRapido } from '@features/solicitudes/components/OfertarRapido';
-import type { ListarSolicitudesFiltros } from '@features/solicitudes/types/index.js';
+import { SolicitudCard } from '@features/solicitudes/components/SolicitudCard';
+import type { EstadoSolicitud, ListarSolicitudesFiltros } from '@features/solicitudes/types/index.js';
 import type { PerfilFuncional } from '@features/identidad/types/index.js';
 
 // Opción D, Fase 3 (docs/DISENO_MODELO_PERFILES.md) — antes ROLES_PUEDEN_PUBLICAR con rol.
@@ -21,6 +23,22 @@ const OPCIONES_URGENCIA = [
   { valor: 'MEDIA', etiqueta: 'Media' },
   { valor: 'BAJA', etiqueta: 'Baja' },
 ];
+// Las 6 vigentes de EstadoSolicitud (backend/domain/solicitudes/value-objects/EstadoSolicitud.ts)
+// con etiqueta legible — el badge de la tarjeta muestra el valor crudo, pero para tabs de
+// navegación hace falta texto en español.
+const TABS_ESTADO: { valor: EstadoSolicitud; etiqueta: string }[] = [
+  { valor: 'ABIERTA', etiqueta: 'Abiertas' },
+  { valor: 'EN_REVISION', etiqueta: 'En revisión' },
+  { valor: 'ACEPTADA_POR_DONANTE', etiqueta: 'Aceptadas' },
+  { valor: 'EN_ENTREGA', etiqueta: 'En entrega' },
+  { valor: 'ATENDIDA', etiqueta: 'Atendidas' },
+  { valor: 'CANCELADA', etiqueta: 'Canceladas' },
+];
+const OPCIONES_PROVINCIA = PROVINCIAS_ECUADOR.map((p) => ({ valor: p, etiqueta: p }));
+const OPCIONES_ORDEN = [
+  { valor: 'fecha_desc', etiqueta: 'Más recientes' },
+  { valor: 'fecha_asc', etiqueta: 'Más antiguas' },
+];
 
 export function SolicitudesPage(): JSX.Element {
   const [filtros, setFiltros] = useState<ListarSolicitudesFiltros>({ page: 1, limit: 12 });
@@ -29,6 +47,9 @@ export function SolicitudesPage(): JSX.Element {
   const solicitudes = useSolicitudes(filtros);
 
   const puedePublicar = sesion.data && PERFILES_PUEDEN_PUBLICAR.some((p) => sesion.data.perfiles.includes(p));
+  const hayFiltrosActivos = Object.entries(filtros).some(
+    ([campo, valor]) => campo !== 'page' && campo !== 'limit' && campo !== 'sort' && Boolean(valor),
+  );
 
   function cambiarFiltro(campo: string, valor: string): void {
     setFiltros((actuales) => ({ ...actuales, [campo]: valor || undefined, page: 1 }));
@@ -45,6 +66,28 @@ export function SolicitudesPage(): JSX.Element {
         ) : null}
       </div>
 
+      {/* Tabs de estado — separadas del panel de filtros porque son la navegación principal del
+          listado (RF-016), no un filtro secundario como categoría/urgencia/ubicación. */}
+      <div className="chips" role="group" aria-label="Estado">
+        <button
+          type="button"
+          className={`chip ${!filtros.estado ? 'chip--activo' : ''}`}
+          onClick={() => cambiarFiltro('estado', '')}
+        >
+          Todas
+        </button>
+        {TABS_ESTADO.map((tab) => (
+          <button
+            key={tab.valor}
+            type="button"
+            className={`chip ${filtros.estado === tab.valor ? 'chip--activo' : ''}`}
+            onClick={() => cambiarFiltro('estado', tab.valor)}
+          >
+            {tab.etiqueta}
+          </button>
+        ))}
+      </div>
+
       <FiltroPanel
         definiciones={[
           {
@@ -54,6 +97,9 @@ export function SolicitudesPage(): JSX.Element {
             variante: 'chips',
           },
           { campo: 'urgencia', etiqueta: 'Urgencia', opciones: OPCIONES_URGENCIA },
+          { campo: 'provincia', etiqueta: 'Provincia', opciones: OPCIONES_PROVINCIA },
+          { campo: 'ciudad', etiqueta: 'Ciudad', variante: 'texto' },
+          { campo: 'sort', etiqueta: 'Ordenar por', opciones: OPCIONES_ORDEN },
         ]}
         valores={filtros as Record<string, string>}
         onCambiar={cambiarFiltro}
@@ -62,7 +108,21 @@ export function SolicitudesPage(): JSX.Element {
       {solicitudes.isLoading ? <p className="estado-lista">Cargando…</p> : null}
       {solicitudes.isError ? <p className="estado-lista">No se pudieron cargar las solicitudes.</p> : null}
       {solicitudes.data && solicitudes.data.data.length === 0 ? (
-        <p className="estado-lista">Aún no hay solicitudes — sé el primero.</p>
+        hayFiltrosActivos ? (
+          <EstadoVacio
+            icono="🔍"
+            titulo="Ninguna solicitud coincide con estos filtros"
+            descripcion="Prueba con otra categoría, urgencia o ubicación."
+            accion={{ texto: 'Limpiar filtros', onClick: () => setFiltros({ page: 1, limit: 12 }) }}
+          />
+        ) : (
+          <EstadoVacio
+            icono="🙏"
+            titulo="Aún no hay solicitudes publicadas"
+            descripcion={puedePublicar ? 'Sé la primera persona en pedir ayuda a la comunidad.' : undefined}
+            accion={puedePublicar ? { texto: '+ Publicar solicitud', to: '/solicitudes/nueva' } : undefined}
+          />
+        )
       ) : null}
 
       {solicitudes.data && solicitudes.data.data.length > 0 ? (
@@ -76,13 +136,7 @@ export function SolicitudesPage(): JSX.Element {
                 solicitud.estadoSolicitud === 'ABIERTA';
               return (
                 <div key={solicitud.id} className="publicacion-card-envoltorio">
-                  <PublicacionCard
-                    rutaDetalle={`/solicitudes/${solicitud.id}`}
-                    titulo={solicitud.titulo}
-                    estado={solicitud.estadoSolicitud}
-                    urgencia={solicitud.urgencia}
-                    ubicacion={`${solicitud.ubicacion.ciudad}, ${solicitud.ubicacion.provincia}`}
-                  />
+                  <SolicitudCard solicitud={solicitud} />
                   {puedeOfertar ? (
                     <OfertarRapido solicitudId={solicitud.id} categoriaId={solicitud.categoria.id} />
                   ) : null}

@@ -32,3 +32,17 @@ export type Urgencia = 'BAJA' | 'MEDIA' | 'ALTA';
 export function claseUrgencia(urgencia: Urgencia): string {
   return `badge badge--urgencia-${urgencia.toLowerCase()}`;
 }
+
+// Mismo catálogo que DonacionWizard/TruequeWizard (EstadoObjeto es idéntico en ambos dominios) —
+// centralizado acá para los detalles, que capturan la condición al crear pero no la mostraban
+// (auditoría de espacio muerto 2026-07-21).
+const ETIQUETAS_ESTADO_OBJETO: Record<string, string> = {
+  NUEVO: 'Nuevo',
+  BUEN_ESTADO: 'Buen estado',
+  USADO: 'Usado',
+  REQUIERE_REPARACION: 'Requiere reparación',
+};
+
+export function etiquetaEstadoObjeto(estadoObjeto: string): string {
+  return ETIQUETAS_ESTADO_OBJETO[estadoObjeto] ?? estadoObjeto;
+}

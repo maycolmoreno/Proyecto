@@ -14,6 +14,8 @@ const ubicacionRetiroSchema = z.object({
   longitud: z.number().min(-180).max(180).optional(),
 });
 
+const itemsIncluidosSchema = z.array(z.string().min(1).max(150)).max(20).optional();
+
 export const crearDonacionSchema = z
   .object({
     titulo: z.string().min(1).max(150),
@@ -22,6 +24,7 @@ export const crearDonacionSchema = z
     estadoObjeto: z.enum(ESTADOS_OBJETO),
     requiereRetiro: z.boolean(),
     ubicacionRetiro: ubicacionRetiroSchema.optional(),
+    itemsIncluidos: itemsIncluidosSchema,
   })
   // Regla de negocio #5 (Fase 3): requiere_retiro = true exige ubicacionRetiro completo.
   .refine((data) => !data.requiereRetiro || !!data.ubicacionRetiro, {
@@ -34,8 +37,25 @@ export const actualizarDonacionSchema = z
     titulo: z.string().min(1).max(150).optional(),
     descripcion: z.string().min(1).optional(),
     estadoObjeto: z.enum(ESTADOS_OBJETO).optional(),
+    itemsIncluidos: itemsIncluidosSchema,
   })
   .refine((data) => Object.keys(data).length > 0, { message: 'Debe incluir al menos un campo a actualizar.' });
+
+export const crearReservaSchema = z.object({
+  mensaje: z.string().max(500).optional(),
+});
+
+export const responderReservaSchema = z
+  .object({
+    aceptar: z.literal(true).optional(),
+    rechazar: z.literal(true).optional(),
+  })
+  .refine((data) => data.aceptar === true || data.rechazar === true, {
+    message: 'Debe indicar aceptar o rechazar.',
+  })
+  .refine((data) => !(data.aceptar === true && data.rechazar === true), {
+    message: 'No puede aceptar y rechazar en la misma solicitud.',
+  });
 
 export const listarDonacionesQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),

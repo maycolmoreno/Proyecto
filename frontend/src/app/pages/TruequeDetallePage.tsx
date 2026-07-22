@@ -5,14 +5,21 @@ import { Button } from '@shared/components/atoms/Button';
 import { Select } from '@shared/components/atoms/Select';
 import { Modal } from '@shared/components/organisms/Modal';
 import { ImageUploader } from '@shared/components/molecules/ImageUploader';
+import { GaleriaImagenes } from '@shared/components/molecules/GaleriaImagenes';
+import { TarjetaAutor } from '@shared/components/molecules/TarjetaAutor';
 import { useToast } from '@shared/components/organisms/ToastProvider';
+import { etiquetaEstadoObjeto } from '@shared/lib/estado-color';
+import { formatearUltimaActividad } from '@shared/lib/fecha';
 import { useSesion } from '@features/identidad/hooks/useSesion';
+import { useUsuarioPublico } from '@features/identidad/hooks/useUsuarioPublico';
 import { useTrueque } from '@features/trueques/hooks/useTrueque';
 import { useTrueques } from '@features/trueques/hooks/useTrueques';
 import { useCancelarTrueque } from '@features/trueques/hooks/useCancelarTrueque';
 import { useProponerTrueque } from '@features/trueques/hooks/useProponerTrueque';
 import { useResponderPropuesta } from '@features/trueques/hooks/useResponderPropuesta';
 import { useImagenesTrueque } from '@features/trueques/hooks/useImagenesTrueque';
+import { useEsFavorito } from '@features/favoritos/hooks/useEsFavorito';
+import { useToggleFavorito } from '@features/favoritos/hooks/useToggleFavorito';
 import { CoordinacionEntrega } from '@features/entregas/components/CoordinacionEntrega';
 import { MatchesSugeridos } from '@features/ia/components/MatchesSugeridos';
 import { ApiError } from '@shared/lib/http-client';
@@ -28,10 +35,13 @@ export function TruequeDetallePage(): JSX.Element {
   const [truequeOfrecidoId, setTruequeOfrecidoId] = useState('');
   const sesion = useSesion();
   const trueque = useTrueque(id);
+  const publicador = useUsuarioPublico(trueque.data?.usuarioId);
   const cancelarTrueque = useCancelarTrueque();
   const proponerTrueque = useProponerTrueque(id ?? '');
   const responderPropuesta = useResponderPropuesta(id ?? '');
   const imagenes = useImagenesTrueque(id ?? '');
+  const favorito = useEsFavorito('TRUEQUE', trueque.data?.id);
+  const toggleFavorito = useToggleFavorito();
   const { mostrarToast } = useToast();
   const navigate = useNavigate();
 
@@ -108,15 +118,52 @@ export function TruequeDetallePage(): JSX.Element {
     }
   }
 
+  function alternarFavorito(): void {
+    toggleFavorito.mutate({ tipoEntidad: 'TRUEQUE', entidadId: trueque.data!.id, esFavorito: favorito });
+  }
+
   return (
     <div className="detalle-pagina">
-      <div className="publicacion-card__imagen detalle-imagen-hero">
-        {trueque.data.imagenes[0] ? <img src={trueque.data.imagenes[0]} alt="" /> : <span aria-hidden="true">📦</span>}
+      <GaleriaImagenes imagenes={trueque.data.imagenes} />
+      <div className="detalle-pagina__encabezado">
+        <StatusBadge estado={trueque.data.estadoTrueque} />
+        {!esDueño && sesion.data ? (
+          <button
+            type="button"
+            className="boton-favorito-detalle"
+            onClick={alternarFavorito}
+            aria-pressed={favorito}
+            disabled={toggleFavorito.isPending}
+          >
+            {favorito ? '❤️ Guardado' : '🤍 Guardar'}
+          </button>
+        ) : null}
       </div>
-      <StatusBadge estado={trueque.data.estadoTrueque} />
       <h1>{trueque.data.titulo}</h1>
       <p style={{ whiteSpace: 'pre-wrap' }}>{trueque.data.descripcion}</p>
-      <p>Categoría: {trueque.data.categoria.nombre}</p>
+
+      <dl className="detalle-ficha lista-datos">
+        <div className="lista-datos__fila">
+          <dt>Categoría</dt>
+          <dd>{trueque.data.categoria.nombre}</dd>
+        </div>
+        <div className="lista-datos__fila">
+          <dt>Condición</dt>
+          <dd>{etiquetaEstadoObjeto(trueque.data.estadoObjeto)}</dd>
+        </div>
+        <div className="lista-datos__fila">
+          <dt>Publicado</dt>
+          <dd>{formatearUltimaActividad(trueque.data.fecha)}</dd>
+        </div>
+      </dl>
+
+      {!esDueño && publicador.data ? (
+        <TarjetaAutor nombre={publicador.data.nombre}>
+          {!puedeProponer && !miPropuestaActiva && sesion.data ? (
+            <Link to={`/conversaciones/${trueque.data.usuarioId}`}>💬 Enviar mensaje</Link>
+          ) : null}
+        </TarjetaAutor>
+      ) : null}
 
       {esDueño ? (
         <>
@@ -184,12 +231,6 @@ export function TruequeDetallePage(): JSX.Element {
             </div>
           ))}
         </div>
-      ) : null}
-
-      {!esDueño && !puedeProponer && !miPropuestaActiva && sesion.data ? (
-        <p>
-          <Link to={`/conversaciones/${trueque.data.usuarioId}`}>💬 Enviar mensaje al publicador</Link>
-        </p>
       ) : null}
 
       <CoordinacionEntrega

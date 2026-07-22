@@ -19,6 +19,16 @@ export interface UbicacionRetiro {
   longitud?: number | null;
 }
 
+export type EstadoReserva = 'PENDIENTE' | 'ACEPTADA' | 'RECHAZADA';
+
+export interface Reserva {
+  id: string;
+  usuarioInteresadoId: string;
+  mensaje: string | null;
+  estado: EstadoReserva;
+  fecha: string;
+}
+
 export interface Donacion {
   id: string;
   donanteId: string;
@@ -29,8 +39,10 @@ export interface Donacion {
   estadoDonacion: EstadoDonacion;
   requiereRetiro: boolean;
   ubicacionRetiro: UbicacionRetiro | null;
+  itemsIncluidos: string[];
   imagenes: string[];
   fecha: string;
+  reservas: Reserva[];
 }
 
 export interface CrearDonacionInput {
@@ -40,12 +52,18 @@ export interface CrearDonacionInput {
   estadoObjeto: EstadoObjeto;
   requiereRetiro: boolean;
   ubicacionRetiro?: UbicacionInput;
+  itemsIncluidos?: string[];
 }
 
 export interface ActualizarDonacionInput {
   titulo?: string;
   descripcion?: string;
   estadoObjeto?: EstadoObjeto;
+  itemsIncluidos?: string[];
+}
+
+export interface CrearReservaInput {
+  mensaje?: string;
 }
 
 export interface ListarDonacionesFiltros {

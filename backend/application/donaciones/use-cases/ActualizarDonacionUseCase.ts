@@ -7,6 +7,7 @@ export interface ActualizarDonacionInput {
   titulo?: string;
   descripcion?: string;
   estadoObjeto?: EstadoObjeto;
+  itemsIncluidos?: string[];
 }
 
 export class NoEsDueñoDeLaDonacionError extends Error {
@@ -31,6 +32,6 @@ export class ActualizarDonacionUseCase {
 
     donacion.actualizar(input);
     await this.donacionRepository.actualizar(donacion);
-    return donacion.toJSON({ incluirUbicacionExacta: true });
+    return donacion.toJSON({ incluirUbicacionExacta: true, solicitanteId, esAdmin: false });
   }
 }

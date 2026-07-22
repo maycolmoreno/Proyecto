@@ -4,13 +4,18 @@ import { StatusBadge } from '@shared/components/atoms/StatusBadge';
 import { Button } from '@shared/components/atoms/Button';
 import { Select } from '@shared/components/atoms/Select';
 import { TextArea } from '@shared/components/atoms/TextArea';
+import { TarjetaAutor } from '@shared/components/molecules/TarjetaAutor';
 import { useToast } from '@shared/components/organisms/ToastProvider';
 import { claseUrgencia } from '@shared/lib/estado-color';
+import { formatearUltimaActividad } from '@shared/lib/fecha';
 import { useSesion } from '@features/identidad/hooks/useSesion';
+import { useUsuarioPublico } from '@features/identidad/hooks/useUsuarioPublico';
 import { useSolicitud } from '@features/solicitudes/hooks/useSolicitud';
 import { useMisDonacionesDisponibles } from '@features/solicitudes/hooks/useMisDonacionesDisponibles';
 import { useCrearOferta } from '@features/solicitudes/hooks/useCrearOferta';
 import { useRechazarOferta } from '@features/solicitudes/hooks/useRechazarOferta';
+import { useEsFavorito } from '@features/favoritos/hooks/useEsFavorito';
+import { useToggleFavorito } from '@features/favoritos/hooks/useToggleFavorito';
 import { CoordinacionEntrega } from '@features/entregas/components/CoordinacionEntrega';
 import { MatchesSugeridos } from '@features/ia/components/MatchesSugeridos';
 import { ApiError } from '@shared/lib/http-client';
@@ -26,8 +31,11 @@ export function SolicitudDetallePage(): JSX.Element {
   const [mensaje, setMensaje] = useState('');
   const sesion = useSesion();
   const solicitud = useSolicitud(id);
+  const beneficiario = useUsuarioPublico(solicitud.data?.beneficiarioId);
   const crearOferta = useCrearOferta(id ?? '');
   const rechazarOferta = useRechazarOferta(id ?? '');
+  const favorito = useEsFavorito('SOLICITUD', solicitud.data?.id);
+  const toggleFavorito = useToggleFavorito();
   const { mostrarToast } = useToast();
 
   // Mis donaciones publicadas de la misma categoría — candidatas para ofrecer (Fase 5 sección 2.5).
@@ -65,21 +73,61 @@ export function SolicitudDetallePage(): JSX.Element {
     }
   }
 
+  function alternarFavorito(): void {
+    toggleFavorito.mutate({ tipoEntidad: 'SOLICITUD', entidadId: solicitud.data!.id, esFavorito: favorito });
+  }
+
   return (
     <div className="detalle-pagina">
-      <StatusBadge estado={solicitud.data.estadoSolicitud} />{' '}
-      <span className={claseUrgencia(solicitud.data.urgencia)}>{solicitud.data.urgencia}</span>
+      <div className="detalle-pagina__encabezado">
+        <div>
+          <StatusBadge estado={solicitud.data.estadoSolicitud} />{' '}
+          <span className={claseUrgencia(solicitud.data.urgencia)}>{solicitud.data.urgencia}</span>
+        </div>
+        {!esDueño && sesion.data ? (
+          <button
+            type="button"
+            className="boton-favorito-detalle"
+            onClick={alternarFavorito}
+            aria-pressed={favorito}
+            disabled={toggleFavorito.isPending}
+          >
+            {favorito ? '❤️ Guardado' : '🤍 Guardar'}
+          </button>
+        ) : null}
+      </div>
       <h1>{solicitud.data.titulo}</h1>
       <p>{solicitud.data.descripcion}</p>
-      <p>
-        Categoría: {solicitud.data.categoria.nombre} · Ciudad: {solicitud.data.ubicacion.ciudad}
-      </p>
-      {solicitud.data.evidenciaUrl ? (
-        <p>
-          <a href={solicitud.data.evidenciaUrl} target="_blank" rel="noreferrer">
-            Ver evidencia
-          </a>
-        </p>
+
+      <dl className="detalle-ficha lista-datos">
+        <div className="lista-datos__fila">
+          <dt>Categoría</dt>
+          <dd>{solicitud.data.categoria.nombre}</dd>
+        </div>
+        <div className="lista-datos__fila">
+          <dt>Ubicación</dt>
+          <dd>{solicitud.data.ubicacion.ciudad}</dd>
+        </div>
+        <div className="lista-datos__fila">
+          <dt>Publicado</dt>
+          <dd>{formatearUltimaActividad(solicitud.data.fecha)}</dd>
+        </div>
+        {solicitud.data.evidenciaUrl ? (
+          <div className="lista-datos__fila">
+            <dt>Evidencia</dt>
+            <dd>
+              <a href={solicitud.data.evidenciaUrl} target="_blank" rel="noreferrer">
+                Ver enlace
+              </a>
+            </dd>
+          </div>
+        ) : null}
+      </dl>
+
+      {!esDueño && beneficiario.data ? (
+        <TarjetaAutor nombre={beneficiario.data.nombre}>
+          {!puedeOfertar && sesion.data ? <Link to={`/conversaciones/${solicitud.data.beneficiarioId}`}>💬 Enviar mensaje</Link> : null}
+        </TarjetaAutor>
       ) : null}
 
       {puedeOfertar ? (
@@ -122,12 +170,6 @@ export function SolicitudDetallePage(): JSX.Element {
             </div>
           ))}
         </div>
-      ) : null}
-
-      {!esDueño && !puedeOfertar && sesion.data ? (
-        <p>
-          <Link to={`/conversaciones/${solicitud.data.beneficiarioId}`}>💬 Enviar mensaje al publicador</Link>
-        </p>
       ) : null}
 
       {ofertaAceptada ? (

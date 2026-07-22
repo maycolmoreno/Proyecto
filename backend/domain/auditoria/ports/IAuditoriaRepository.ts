@@ -1,7 +1,15 @@
 export const ACCIONES_AUDITORIA = ['CREAR', 'APROBAR', 'CANCELAR', 'BLOQUEAR', 'ELIMINAR', 'LOGIN_FALLIDO'] as const;
 export type AccionAuditoria = (typeof ACCIONES_AUDITORIA)[number];
 
-export const ENTIDADES_AUDITORIA = ['USUARIO', 'DONACION', 'SOLICITUD', 'TRUEQUE', 'OFERTA', 'PROPUESTA_TRUEQUE'] as const;
+export const ENTIDADES_AUDITORIA = [
+  'USUARIO',
+  'DONACION',
+  'SOLICITUD',
+  'TRUEQUE',
+  'OFERTA',
+  'PROPUESTA_TRUEQUE',
+  'RESERVA_DONACION',
+] as const;
 export type EntidadAuditoria = (typeof ENTIDADES_AUDITORIA)[number];
 
 export interface RegistrarAuditoriaInput {

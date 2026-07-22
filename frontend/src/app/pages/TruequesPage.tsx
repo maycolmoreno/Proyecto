@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { PublicacionCard } from '@shared/components/molecules/PublicacionCard';
 import { FiltroPanel } from '@shared/components/organisms/FiltroPanel';
 import { Button } from '@shared/components/atoms/Button';
+import { EstadoVacio } from '@shared/components/molecules/EstadoVacio';
 import { useSesion } from '@features/identidad/hooks/useSesion';
 import { useCategorias } from '@features/categorias/hooks/useCategorias';
 import { useTrueques } from '@features/trueques/hooks/useTrueques';
+import { TruequeCard } from '@features/trueques/components/TruequeCard';
 import type { EstadoTrueque, ListarTruequesFiltros } from '@features/trueques/types/index.js';
 import type { PerfilFuncional } from '@features/identidad/types/index.js';
 
@@ -26,6 +27,9 @@ export function TruequesPage(): JSX.Element {
   const trueques = useTrueques(filtros);
 
   const puedePublicar = sesion.data && PERFILES_PUEDEN_PUBLICAR.some((p) => sesion.data.perfiles.includes(p));
+  const hayFiltrosActivos = Object.entries(filtros).some(
+    ([campo, valor]) => campo !== 'page' && campo !== 'limit' && campo !== 'sort' && Boolean(valor),
+  );
 
   function cambiarFiltro(campo: string, valor: string): void {
     setFiltros((actuales) => ({ ...actuales, [campo]: valor || undefined, page: 1 }));
@@ -59,20 +63,28 @@ export function TruequesPage(): JSX.Element {
       {trueques.isLoading ? <p className="estado-lista">Cargando…</p> : null}
       {trueques.isError ? <p className="estado-lista">No se pudieron cargar los trueques.</p> : null}
       {trueques.data && trueques.data.data.length === 0 ? (
-        <p className="estado-lista">Aún no hay trueques publicados — sé el primero.</p>
+        hayFiltrosActivos ? (
+          <EstadoVacio
+            icono="🔍"
+            titulo="Ningún trueque coincide con estos filtros"
+            descripcion="Prueba con otra categoría o estado."
+            accion={{ texto: 'Limpiar filtros', onClick: () => setFiltros({ page: 1, limit: 12 }) }}
+          />
+        ) : (
+          <EstadoVacio
+            icono="🔄"
+            titulo="Aún no hay trueques publicados"
+            descripcion={puedePublicar ? 'Sé la primera persona en proponer un trueque.' : undefined}
+            accion={puedePublicar ? { texto: '+ Publicar trueque', to: '/trueques/nuevo' } : undefined}
+          />
+        )
       ) : null}
 
       {trueques.data && trueques.data.data.length > 0 ? (
         <>
           <div className="grid-publicaciones">
             {trueques.data.data.map((trueque) => (
-              <PublicacionCard
-                key={trueque.id}
-                rutaDetalle={`/trueques/${trueque.id}`}
-                titulo={trueque.titulo}
-                imagenUrl={trueque.imagenes[0]}
-                estado={trueque.estadoTrueque}
-              />
+              <TruequeCard key={trueque.id} trueque={trueque} />
             ))}
           </div>
           <div className="fila-acciones">

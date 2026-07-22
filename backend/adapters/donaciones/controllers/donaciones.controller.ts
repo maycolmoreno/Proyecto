@@ -5,6 +5,8 @@ import {
   listarDonacionesQuerySchema,
   firmarImagenSchema,
   registrarImagenSchema,
+  crearReservaSchema,
+  responderReservaSchema,
 } from './schemas.js';
 import type { PublicarDonacionUseCase } from '@application/donaciones/use-cases/PublicarDonacionUseCase.js';
 import type { ListarDonacionesUseCase } from '@application/donaciones/use-cases/ListarDonacionesUseCase.js';
@@ -13,6 +15,8 @@ import type { ActualizarDonacionUseCase } from '@application/donaciones/use-case
 import type { CancelarDonacionUseCase } from '@application/donaciones/use-cases/CancelarDonacionUseCase.js';
 import type { FirmarSubidaImagenUseCase } from '@application/donaciones/use-cases/FirmarSubidaImagenUseCase.js';
 import type { RegistrarImagenUseCase } from '@application/donaciones/use-cases/RegistrarImagenUseCase.js';
+import type { CrearReservaUseCase } from '@application/donaciones/use-cases/CrearReservaUseCase.js';
+import type { ResponderReservaUseCase } from '@application/donaciones/use-cases/ResponderReservaUseCase.js';
 
 /** Adaptador de entrada (Hexagonal) — traduce HTTP a invocaciones de caso de uso. Sin lógica de negocio. */
 export class DonacionesController {
@@ -24,6 +28,8 @@ export class DonacionesController {
     private readonly cancelarDonacion: CancelarDonacionUseCase,
     private readonly firmarSubidaImagen: FirmarSubidaImagenUseCase,
     private readonly registrarImagen: RegistrarImagenUseCase,
+    private readonly crearReserva: CrearReservaUseCase,
+    private readonly responderReserva: ResponderReservaUseCase,
   ) {}
 
   crear = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -91,6 +97,31 @@ export class DonacionesController {
       const input = registrarImagenSchema.parse(req.body);
       const imagenes = await this.registrarImagen.ejecutar(req.params.id!, req.usuario!.sub, input);
       res.status(201).json({ data: { imagenes } });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  crearReservaHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const input = crearReservaSchema.parse(req.body);
+      const donacion = await this.crearReserva.ejecutar(req.params.id!, req.usuario!.sub, input);
+      res.status(201).json({ data: donacion });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  responderReservaHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const input = responderReservaSchema.parse(req.body);
+      const donacion = await this.responderReserva.ejecutar(
+        req.params.id!,
+        req.params.reservaId!,
+        req.usuario!.sub,
+        input,
+      );
+      res.status(200).json({ data: donacion });
     } catch (error) {
       next(error);
     }

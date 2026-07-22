@@ -6,6 +6,13 @@ import type { ITruequeRepository } from '@domain/trueques/ports/ITruequeReposito
 import type { IUsuarioRepository } from '@domain/identidad/ports/IUsuarioRepository.js';
 import type { TipoOperacionEntrega } from '@domain/entregas/value-objects/TipoOperacionEntrega.js';
 import type { TipoEntidadIA } from '@domain/ia/ports/IAnalisisIARepository.js';
+import type { MatchingService } from '@domain/ia/services/MatchingService.js';
+
+/** Umbral mínimo de `MatchResultado.score` (escala 0-1, ver SYSTEM_PROMPT_MATCHING en los adapters
+ * de IIAProvider) para avisarle al donante — por debajo de esto la coincidencia sugerida en el
+ * detalle de la solicitud (RF-016, bajo demanda) sigue disponible, pero no amerita interrumpir al
+ * donante con una notificación push. */
+const UMBRAL_NOTIFICACION_COINCIDENCIA = 0.7;
 
 /** Domain Service (Fase 2, sección 6) — "Reacciona a eventos de dominio y decide qué notificar"
  * (RF-020). Segundo listener real del Event Bus (el primero fue `ModeracionIAService`, Sprint 4):
@@ -33,6 +40,7 @@ export class NotificacionDispatchService {
     private readonly solicitudRepository: ISolicitudRepository,
     private readonly truequeRepository: ITruequeRepository,
     private readonly usuarioRepository: IUsuarioRepository,
+    private readonly matchingService: MatchingService,
   ) {}
 
   /** `entidadTipo` (extensión post-cierre, ver docs/PLAN_FRONTEND.md) — persiste el discriminador de
@@ -60,6 +68,36 @@ export class NotificacionDispatchService {
     this.notificar(payload.donanteId, 'DonacionPublicada', 'DONACION', payload.id, `Tu donación "${payload.titulo}" fue publicada.`);
   }
 
+  async alReservaDonacionCreada(payload: { donacionId: string; tituloDonacion: string; donanteId: string }): Promise<void> {
+    this.notificar(
+      payload.donanteId,
+      'ReservaDonacionCreada',
+      'DONACION',
+      payload.donacionId,
+      `Alguien quiere tu donación "${payload.tituloDonacion}".`,
+    );
+  }
+
+  async alReservaDonacionAceptada(payload: { donacionId: string; usuarioInteresadoId: string }): Promise<void> {
+    this.notificar(
+      payload.usuarioInteresadoId,
+      'ReservaDonacionAceptada',
+      'DONACION',
+      payload.donacionId,
+      'El donante aceptó tu reserva.',
+    );
+  }
+
+  async alReservaDonacionRechazada(payload: { donacionId: string; usuarioInteresadoId: string }): Promise<void> {
+    this.notificar(
+      payload.usuarioInteresadoId,
+      'ReservaDonacionRechazada',
+      'DONACION',
+      payload.donacionId,
+      'El donante rechazó tu reserva.',
+    );
+  }
+
   async alOfertaRecibida(payload: { solicitudId: string; beneficiarioId: string }): Promise<void> {
     this.notificar(payload.beneficiarioId, 'OfertaRecibida', 'SOLICITUD', payload.solicitudId, 'Recibiste una oferta para tu solicitud.');
   }
@@ -71,6 +109,26 @@ export class NotificacionDispatchService {
   async alSolicitudAtendida(payload: { id: string; beneficiarioId: string }): Promise<void> {
     this.notificar(payload.beneficiarioId, 'SolicitudAtendida', 'SOLICITUD', payload.id, 'Tu solicitud fue atendida completamente.');
     await this.registrarEventoKpi('SolicitudAtendida', 'SOLICITUD', payload.id, payload.beneficiarioId);
+  }
+
+  /** Complementa RF-016: antes las coincidencias solo se calculaban bajo demanda (al abrir el
+   * detalle de la solicitud/donación, `GET /ia/matching`). Aquí se reutiliza el mismo
+   * `MatchingService` justo al crear la solicitud para avisar de inmediato a los donantes cuyas
+   * donaciones ya publicadas coinciden, en vez de depender de que alguien abra la publicación. */
+  async alSolicitudCreadaBuscarCoincidencias(payload: { id: string; titulo: string }): Promise<void> {
+    const resultados = await this.matchingService.buscarCoincidencias('SOLICITUD', payload.id);
+    const coincidencias = resultados.filter((r) => r.score >= UMBRAL_NOTIFICACION_COINCIDENCIA);
+    for (const resultado of coincidencias) {
+      const donacion = await this.donacionRepository.buscarPorId(resultado.candidatoId);
+      if (!donacion) continue;
+      this.notificar(
+        donacion.donanteId,
+        'CoincidenciaEncontrada',
+        'SOLICITUD',
+        payload.id,
+        `Una nueva solicitud, "${payload.titulo}", podría coincidir con tu donación "${donacion.titulo}".`,
+      );
+    }
   }
 
   async alTruequePublicado(payload: { id: string; titulo: string; usuarioId: string }): Promise<void> {
@@ -164,7 +222,12 @@ export class NotificacionDispatchService {
         this.donacionRepository.buscarPorId(idReferencia),
         this.solicitudRepository.buscarPorOfertaDonacionAceptada(idReferencia),
       ]);
-      return [donacion?.donanteId, solicitud?.beneficiarioId].filter((id): id is string => !!id);
+      // reservaAceptada: mismo fix que EntregaAutorizacionService — la Entrega también puede
+      // originarse en una reserva directa ("Quiero este artículo"), no solo en una Oferta.
+      const reservaAceptada = donacion?.reservas.find((r) => r.estado === 'ACEPTADA');
+      return [donacion?.donanteId, solicitud?.beneficiarioId, reservaAceptada?.usuarioInteresadoId].filter(
+        (id): id is string => !!id,
+      );
     }
 
     const truequeOrigen = await this.truequeRepository.buscarPorId(idReferencia);

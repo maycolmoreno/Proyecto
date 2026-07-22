@@ -17,6 +17,7 @@ export interface PublicarDonacionInput {
   estadoObjeto: EstadoObjeto;
   requiereRetiro: boolean;
   ubicacionRetiro?: CrearUbicacionRetiroInput;
+  itemsIncluidos?: string[];
 }
 
 export class CategoriaInvalidaError extends Error {
@@ -54,6 +55,7 @@ export class PublicarDonacionUseCase {
       estadoObjeto: input.estadoObjeto,
       requiereRetiro: input.requiereRetiro,
       ubicacionRetiro,
+      itemsIncluidos: input.itemsIncluidos,
     });
 
     await this.donacionRepository.crear(donacion);

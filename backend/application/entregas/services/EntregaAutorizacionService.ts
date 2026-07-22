@@ -22,7 +22,13 @@ export class EntregaAutorizacionService {
         this.donacionRepository.buscarPorId(entrega.idReferencia),
         this.solicitudRepository.buscarPorOfertaDonacionAceptada(entrega.idReferencia),
       ]);
-      return [donacion?.donanteId, solicitud?.beneficiarioId].filter((id): id is string => !!id);
+      // reservaAceptada: la Entrega también puede originarse en "Quiero este artículo" (reserva
+      // directa sobre la Donación), no solo en una Oferta vía Solicitud — sin esto, quien reservó
+      // y fue aceptado nunca podría ver/gestionar su propia Entrega (esParteInvolucrada siempre false).
+      const reservaAceptada = donacion?.reservas.find((r) => r.estado === 'ACEPTADA');
+      return [donacion?.donanteId, solicitud?.beneficiarioId, reservaAceptada?.usuarioInteresadoId].filter(
+        (id): id is string => !!id,
+      );
     }
 
     // TRUEQUE: entrega.idReferencia es el trueque ORIGEN (Fase 6, sección 5 — mismo patrón que DONACION).

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { Stepper } from '@shared/components/molecules/Stepper';
 import { Input } from '@shared/components/atoms/Input';
 import { TextArea } from '@shared/components/atoms/TextArea';
@@ -33,8 +34,17 @@ const ESTADOS_OBJETO: { valor: EstadoObjeto; etiqueta: string }[] = [
   { valor: 'REQUIERE_REPARACION', etiqueta: 'Requiere reparación' },
 ];
 
+// Desliza el contenido del paso en la dirección en que se navega (Siguiente/Atrás) — la dirección
+// es información real del gesto, no decoración (skill motion-framer, 2026-07-21).
+const VARIANTES_PASO = {
+  entra: (direccion: number) => ({ opacity: 0, x: direccion > 0 ? 24 : -24 }),
+  centro: { opacity: 1, x: 0 },
+  sale: (direccion: number) => ({ opacity: 0, x: direccion > 0 ? -24 : 24 }),
+};
+
 export function TruequeWizard(): JSX.Element {
   const [paso, setPaso] = useState(1);
+  const [direccion, setDireccion] = useState(1);
   const [categoriaId, setCategoriaId] = useState('');
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -44,7 +54,6 @@ export function TruequeWizard(): JSX.Element {
   const [publicando, setPublicando] = useState(false);
   const [truequePublicado, setTruequePublicado] = useState<Trueque | null>(null);
   const [sugerencia, setSugerencia] = useState<{
-    categoriaSugerida: string;
     tituloSugerido: string;
     descripcionSugerida: string;
     prioridadSugerida: string | null;
@@ -56,6 +65,7 @@ export function TruequeWizard(): JSX.Element {
   const clasificar = useClasificar();
   const { mostrarToast } = useToast();
   const navigate = useNavigate();
+  const prefiereReducirMovimiento = useReducedMotion();
   // Se dispara ni bien hay id (mismo query que MatchesSugeridos, TanStack Query la deduplica) —
   // se usa acá solo para controlar los mensajes de carga/vacío/error del paso de resultado.
   const matches = useMatches('TRUEQUE', truequePublicado?.id);
@@ -71,18 +81,18 @@ export function TruequeWizard(): JSX.Element {
 
   function aplicarSugerencia(): void {
     if (!sugerencia) return;
-    const categoria = (categorias.data ?? []).find((c) => c.nombre === sugerencia.categoriaSugerida);
-    if (categoria) setCategoriaId(categoria.id);
     setTitulo(sugerencia.tituloSugerido);
     setDescripcion(sugerencia.descripcionSugerida);
     setSugerenciaAplicada(true);
   }
 
   function siguiente(): void {
+    setDireccion(1);
     setPaso((p) => Math.min(p + 1, TOTAL_PASOS));
   }
 
   function atras(): void {
+    setDireccion(-1);
     setPaso((p) => Math.max(p - 1, 1));
   }
 
@@ -143,7 +153,12 @@ export function TruequeWizard(): JSX.Element {
   // intercambio o simplemente ir a ver su publicación.
   if (truequePublicado) {
     return (
-      <div className="wizard">
+      <motion.div
+        className="wizard"
+        initial={prefiereReducirMovimiento ? false : { opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: 'easeOut' }}
+      >
         <h2>¡Trueque publicado con éxito!</h2>
         <p>Buscamos otros trueques publicados que podrían interesarte para intercambiar.</p>
         {matches.isLoading ? <p className="estado-lista">Buscando coincidencias…</p> : null}
@@ -159,7 +174,7 @@ export function TruequeWizard(): JSX.Element {
             Ver mi trueque
           </Button>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
@@ -167,6 +182,16 @@ export function TruequeWizard(): JSX.Element {
     <div className="wizard">
       <Stepper pasoActual={paso} totalPasos={TOTAL_PASOS} etiqueta={etiquetasPaso[paso - 1]!} />
 
+      <AnimatePresence mode="wait" custom={direccion} initial={false}>
+      <motion.div
+        key={paso}
+        custom={direccion}
+        variants={VARIANTES_PASO}
+        initial="entra"
+        animate="centro"
+        exit="sale"
+        transition={{ duration: prefiereReducirMovimiento ? 0 : 0.22, ease: 'easeOut' }}
+      >
       {paso === 1 ? (
         <>
           <Select
@@ -205,6 +230,7 @@ export function TruequeWizard(): JSX.Element {
       {paso === 3 ? (
         <div>
           <p>Agrega fotos del objeto (se suben al publicar).</p>
+          <p className="aviso-info">Las publicaciones con foto se notan más en el listado — agrega al menos una si puedes.</p>
           <div className="image-uploader__grid">
             {archivos.map((archivo, i) => (
               <img
@@ -220,13 +246,19 @@ export function TruequeWizard(): JSX.Element {
       ) : null}
 
       {paso === 4 ? (
-        <TextArea
-          label="¿Qué buscas a cambio? (opcional)"
-          name="queBuscas"
-          placeholder="Ej: busco herramientas de jardinería o algo similar…"
-          value={queBuscas}
-          onChange={(e) => setQueBuscas(e.target.value)}
-        />
+        <div>
+          <p className="aviso-info">
+            Cuanto más específico seas, mejor podremos sugerirte trueques que coincidan (ej. "ropa de niño talla 6" en
+            vez de "ropa"). Este texto se agrega a la descripción de tu publicación.
+          </p>
+          <TextArea
+            label="¿Qué buscas a cambio? (opcional)"
+            name="queBuscas"
+            placeholder="Ej: busco herramientas de jardinería o algo similar…"
+            value={queBuscas}
+            onChange={(e) => setQueBuscas(e.target.value)}
+          />
+        </div>
       ) : null}
 
       {paso === 5 ? (
@@ -248,6 +280,8 @@ export function TruequeWizard(): JSX.Element {
           />
         </div>
       ) : null}
+      </motion.div>
+      </AnimatePresence>
 
       <div className="wizard__acciones">
         <Button type="button" variant="secundario" onClick={atras} disabled={paso === 1}>

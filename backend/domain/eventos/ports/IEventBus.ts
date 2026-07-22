@@ -15,7 +15,10 @@ export type NombreEventoDominio =
   | 'EntregaProgramada'
   | 'EntregaConfirmada'
   | 'PublicacionModerada'
-  | 'RiesgoDetectado';
+  | 'RiesgoDetectado'
+  | 'ReservaDonacionCreada'
+  | 'ReservaDonacionAceptada'
+  | 'ReservaDonacionRechazada';
 
 /** Puerto de salida — Event Bus in-process (ADR-023). Implementado en main/event-bus.ts;
  * sin adapter/ dedicado porque no envuelve ninguna tecnología externa (Node EventEmitter). */

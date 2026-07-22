@@ -4,7 +4,6 @@ import { Button } from '@shared/components/atoms/Button';
 // features/ia (regla de shared/, Fase 1 sección 9.3). Sugerencia editable, nunca autoaplicada
 // (ADR-010, human-in-the-loop): el padre decide cómo mapear/aplicar los campos al aceptar.
 interface Sugerencia {
-  categoriaSugerida: string;
   tituloSugerido: string;
   descripcionSugerida: string;
   prioridadSugerida: string | null;
@@ -30,7 +29,6 @@ export function IASuggestionBox({ sugerencia, cargando, aplicada, onSugerir, onA
           <p>
             <strong>Sugerencia de la IA</strong>
           </p>
-          <p>Categoría: {sugerencia.categoriaSugerida}</p>
           <p>Título: {sugerencia.tituloSugerido}</p>
           <p>Descripción: {sugerencia.descripcionSugerida}</p>
           {sugerencia.prioridadSugerida ? <p>Prioridad: {sugerencia.prioridadSugerida}</p> : null}

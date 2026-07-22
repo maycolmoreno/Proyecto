@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { Stepper } from '@shared/components/molecules/Stepper';
 import { Input } from '@shared/components/atoms/Input';
 import { TextArea } from '@shared/components/atoms/TextArea';
@@ -33,18 +34,28 @@ const ESTADOS_OBJETO: { valor: EstadoObjeto; etiqueta: string }[] = [
 
 const UBICACION_VACIA: UbicacionInput = { provincia: '', ciudad: '' };
 
+// Desliza el contenido del paso en la dirección en que se navega (Siguiente/Atrás) — la dirección
+// es información real del gesto, no decoración (skill motion-framer, 2026-07-21).
+const VARIANTES_PASO = {
+  entra: (direccion: number) => ({ opacity: 0, x: direccion > 0 ? 24 : -24 }),
+  centro: { opacity: 1, x: 0 },
+  sale: (direccion: number) => ({ opacity: 0, x: direccion > 0 ? -24 : 24 }),
+};
+
 export function DonacionWizard(): JSX.Element {
   const [paso, setPaso] = useState(1);
+  const [direccion, setDireccion] = useState(1);
   const [categoriaId, setCategoriaId] = useState('');
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [estadoObjeto, setEstadoObjeto] = useState<EstadoObjeto>('BUEN_ESTADO');
   const [archivos, setArchivos] = useState<File[]>([]);
+  const [itemsIncluidos, setItemsIncluidos] = useState<string[]>([]);
+  const [nuevoItem, setNuevoItem] = useState('');
   const [requiereRetiro, setRequiereRetiro] = useState(false);
   const [ubicacionRetiro, setUbicacionRetiro] = useState<UbicacionInput>(UBICACION_VACIA);
   const [publicando, setPublicando] = useState(false);
   const [sugerencia, setSugerencia] = useState<{
-    categoriaSugerida: string;
     tituloSugerido: string;
     descripcionSugerida: string;
     prioridadSugerida: string | null;
@@ -57,6 +68,7 @@ export function DonacionWizard(): JSX.Element {
   const clasificar = useClasificar();
   const { mostrarToast } = useToast();
   const navigate = useNavigate();
+  const prefiereReducirMovimiento = useReducedMotion();
 
   async function sugerirConIA(): Promise<void> {
     try {
@@ -69,19 +81,30 @@ export function DonacionWizard(): JSX.Element {
 
   function aplicarSugerencia(): void {
     if (!sugerencia) return;
-    const categoria = (categorias.data ?? []).find((c) => c.nombre === sugerencia.categoriaSugerida);
-    if (categoria) setCategoriaId(categoria.id);
     setTitulo(sugerencia.tituloSugerido);
     setDescripcion(sugerencia.descripcionSugerida);
     setSugerenciaAplicada(true);
   }
 
   function siguiente(): void {
+    setDireccion(1);
     setPaso((p) => Math.min(p + 1, TOTAL_PASOS));
   }
 
   function atras(): void {
+    setDireccion(-1);
     setPaso((p) => Math.max(p - 1, 1));
+  }
+
+  function agregarItemIncluido(): void {
+    const item = nuevoItem.trim();
+    if (!item) return;
+    setItemsIncluidos((actuales) => [...actuales, item]);
+    setNuevoItem('');
+  }
+
+  function quitarItemIncluido(indice: number): void {
+    setItemsIncluidos((actuales) => actuales.filter((_, i) => i !== indice));
   }
 
   function agregarArchivos(evento: React.ChangeEvent<HTMLInputElement>): void {
@@ -105,6 +128,7 @@ export function DonacionWizard(): JSX.Element {
         estadoObjeto,
         requiereRetiro,
         ubicacionRetiro: requiereRetiro ? ubicacionRetiro : undefined,
+        itemsIncluidos: itemsIncluidos.length > 0 ? itemsIncluidos : undefined,
       });
     } catch (error) {
       const mensaje = error instanceof ApiError ? error.message : 'No se pudo publicar la donación. Intenta de nuevo.';
@@ -148,6 +172,16 @@ export function DonacionWizard(): JSX.Element {
     <div className="wizard">
       <Stepper pasoActual={paso} totalPasos={TOTAL_PASOS} etiqueta={etiquetasPaso[paso - 1]!} />
 
+      <AnimatePresence mode="wait" custom={direccion} initial={false}>
+      <motion.div
+        key={paso}
+        custom={direccion}
+        variants={VARIANTES_PASO}
+        initial="entra"
+        animate="centro"
+        exit="sale"
+        transition={{ duration: prefiereReducirMovimiento ? 0 : 0.22, ease: 'easeOut' }}
+      >
       {paso === 1 ? (
         <>
           <Select
@@ -180,12 +214,45 @@ export function DonacionWizard(): JSX.Element {
             opciones={ESTADOS_OBJETO}
             required
           />
+          {/* Opcional — para donaciones con varias piezas (ej. juego de sala): qué incluye
+              exactamente, más allá de la descripción libre. */}
+          <div className="form-field">
+            <label htmlFor="nuevoItemIncluido">¿Qué incluye? (opcional)</label>
+            <div className="fila-agregar-item">
+              <input
+                id="nuevoItemIncluido"
+                type="text"
+                value={nuevoItem}
+                onChange={(e) => setNuevoItem(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    agregarItemIncluido();
+                  }
+                }}
+                placeholder="Ej. Sofá 3 puestos"
+              />
+              <Button type="button" variant="secundario" onClick={agregarItemIncluido} disabled={!nuevoItem.trim()}>
+                Agregar
+              </Button>
+            </div>
+            {itemsIncluidos.length > 0 ? (
+              <div className="chips">
+                {itemsIncluidos.map((item, i) => (
+                  <button key={`${item}-${i}`} type="button" className="chip" onClick={() => quitarItemIncluido(i)}>
+                    {item} ✕
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
         </>
       ) : null}
 
       {paso === 3 ? (
         <div>
           <p>Agrega fotos del objeto (se suben al publicar).</p>
+          <p className="aviso-info">Las publicaciones con foto se notan más en el listado — agrega al menos una si puedes.</p>
           <div className="image-uploader__grid">
             {archivos.map((archivo, i) => (
               <img
@@ -202,6 +269,10 @@ export function DonacionWizard(): JSX.Element {
 
       {paso === 4 ? (
         <>
+          <p className="aviso-info">
+            Si marcas esta opción, quien reciba la donación verá tu ubicación para coordinar el retiro. Si no la marcas,
+            van a ponerse de acuerdo por chat una vez publicada.
+          </p>
           <label>
             <input type="checkbox" checked={requiereRetiro} onChange={(e) => setRequiereRetiro(e.target.checked)} />
             {' '}Requiere que lo retiren en mi ubicación
@@ -223,7 +294,18 @@ export function DonacionWizard(): JSX.Element {
             <strong>{titulo}</strong>
           </p>
           <p>{descripcion}</p>
+          {/* La sugerencia de IA (más abajo) puede equivocarse de categoría — se deja el Select
+              editable acá mismo para corregirla sin retroceder los 4 pasos anteriores. */}
+          <Select
+            label="Categoría"
+            name="categoriaIdRevision"
+            value={categoriaId}
+            onChange={(e) => setCategoriaId(e.target.value)}
+            opciones={(categorias.data ?? []).map((c) => ({ valor: c.id, etiqueta: c.nombre }))}
+            required
+          />
           <p>Estado: {ESTADOS_OBJETO.find((e) => e.valor === estadoObjeto)?.etiqueta}</p>
+          {itemsIncluidos.length > 0 ? <p>Incluye: {itemsIncluidos.join(', ')}</p> : null}
           <p>Fotos: {archivos.length}</p>
           {requiereRetiro ? (
             <p>
@@ -239,6 +321,8 @@ export function DonacionWizard(): JSX.Element {
           />
         </div>
       ) : null}
+      </motion.div>
+      </AnimatePresence>
 
       <div className="wizard__acciones">
         <Button type="button" variant="secundario" onClick={atras} disabled={paso === 1}>

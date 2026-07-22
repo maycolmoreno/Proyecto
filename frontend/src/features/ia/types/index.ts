@@ -9,7 +9,6 @@ export interface ClasificarInput {
 }
 
 export interface ClasificacionResultado {
-  categoriaSugerida: string;
   tituloSugerido: string;
   descripcionSugerida: string;
   prioridadSugerida: Prioridad | null;

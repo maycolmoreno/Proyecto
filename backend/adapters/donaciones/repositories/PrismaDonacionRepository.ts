@@ -1,4 +1,11 @@
-import type { PrismaClient, Prisma, Donacion as DonacionRow, Categoria as CategoriaRow, Ubicacion as UbicacionRow } from '@prisma/client';
+import type {
+  PrismaClient,
+  Prisma,
+  Donacion as DonacionRow,
+  Categoria as CategoriaRow,
+  Ubicacion as UbicacionRow,
+  ReservaDonacion as ReservaRow,
+} from '@prisma/client';
 import { Donacion } from '@domain/donaciones/entities/Donacion.js';
 import type {
   DonacionFiltros,
@@ -8,10 +15,15 @@ import type {
 } from '@domain/donaciones/ports/IDonacionRepository.js';
 import type { EstadoObjeto } from '@domain/donaciones/value-objects/EstadoObjeto.js';
 import type { EstadoDonacion } from '@domain/donaciones/value-objects/EstadoDonacion.js';
+import type { EstadoReserva } from '@domain/donaciones/value-objects/EstadoReserva.js';
 
-type DonacionConRelaciones = DonacionRow & { categoria: CategoriaRow; ubicacionRetiro: UbicacionRow | null };
+type DonacionConRelaciones = DonacionRow & {
+  categoria: CategoriaRow;
+  ubicacionRetiro: UbicacionRow | null;
+  reservas: ReservaRow[];
+};
 
-const INCLUDE_RELACIONES = { categoria: true, ubicacionRetiro: true } satisfies Prisma.DonacionInclude;
+const INCLUDE_RELACIONES = { categoria: true, ubicacionRetiro: true, reservas: true } satisfies Prisma.DonacionInclude;
 
 /** Adaptador de salida (Hexagonal) — implementa IDonacionRepository con Prisma (ADR-008). */
 export class PrismaDonacionRepository implements IDonacionRepository {
@@ -29,21 +41,39 @@ export class PrismaDonacionRepository implements IDonacionRepository {
         estadoDonacion: donacion.estadoDonacion,
         requiereRetiro: donacion.requiereRetiro,
         ubicacionRetiroId: donacion.ubicacionRetiroId,
+        itemsIncluidos: donacion.itemsIncluidos,
         fecha: donacion.fecha,
       },
     });
   }
 
   async actualizar(donacion: Donacion): Promise<void> {
-    await this.prisma.donacion.update({
-      where: { id: donacion.id },
-      data: {
-        titulo: donacion.titulo,
-        descripcion: donacion.descripcion,
-        estadoObjeto: donacion.estadoObjeto,
-        estadoDonacion: donacion.estadoDonacion,
-      },
-    });
+    await this.prisma.$transaction([
+      this.prisma.donacion.update({
+        where: { id: donacion.id },
+        data: {
+          titulo: donacion.titulo,
+          descripcion: donacion.descripcion,
+          estadoObjeto: donacion.estadoObjeto,
+          estadoDonacion: donacion.estadoDonacion,
+          itemsIncluidos: donacion.itemsIncluidos,
+        },
+      }),
+      ...donacion.reservas.map((reserva) =>
+        this.prisma.reservaDonacion.upsert({
+          where: { id: reserva.id },
+          create: {
+            id: reserva.id,
+            donacionId: donacion.id,
+            usuarioInteresadoId: reserva.usuarioInteresadoId,
+            mensaje: reserva.mensaje,
+            estado: reserva.estado,
+            fecha: reserva.fecha,
+          },
+          update: { estado: reserva.estado },
+        }),
+      ),
+    ]);
   }
 
   async buscarPorId(id: string): Promise<Donacion | null> {
@@ -123,8 +153,16 @@ export class PrismaDonacionRepository implements IDonacionRepository {
             longitud: row.ubicacionRetiro.longitud ? Number(row.ubicacionRetiro.longitud) : null,
           }
         : null,
+      itemsIncluidos: row.itemsIncluidos,
       imagenes,
       fecha: row.fecha,
+      reservas: row.reservas.map((r) => ({
+        id: r.id,
+        usuarioInteresadoId: r.usuarioInteresadoId,
+        mensaje: r.mensaje,
+        estado: r.estado as EstadoReserva,
+        fecha: r.fecha,
+      })),
     });
     return donacion;
   }

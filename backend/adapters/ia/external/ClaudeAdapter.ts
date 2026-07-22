@@ -20,9 +20,8 @@ Fuera de alcance: no das asesoría legal/médica/financiera; no verificas la con
 Estilo: español, claro, breve.`;
 
 const SYSTEM_PROMPT_CLASIFICACION =
-  'Dado el título y descripción de una publicación, sugiere una categoría (EXACTAMENTE una de las vigentes indicadas), ' +
-  'un título y una descripción mejorados (mismo idioma), y si se indica que es una solicitud, una prioridad. ' +
-  'Responde solo en el formato JSON solicitado.';
+  'Dado el título y descripción de una publicación, sugiere un título y una descripción mejorados (mismo idioma), ' +
+  'y si se indica que es una solicitud, una prioridad. Responde solo en el formato JSON solicitado.';
 
 const SYSTEM_PROMPT_MATCHING =
   'Compara la publicación A contra el candidato B (ya filtrados por categoría/ubicación/estado). ' +
@@ -73,11 +72,10 @@ export class ClaudeAdapter implements IIAProvider {
   async clasificar(input: ClasificacionInput): Promise<ClasificacionResultado> {
     const client = this.requerirCliente();
     const propiedades: Record<string, unknown> = {
-      categoriaSugerida: { type: 'string', enum: input.categoriasVigentes },
       tituloSugerido: { type: 'string' },
       descripcionSugerida: { type: 'string' },
     };
-    const requeridos = ['categoriaSugerida', 'tituloSugerido', 'descripcionSugerida'];
+    const requeridos = ['tituloSugerido', 'descripcionSugerida'];
     if (input.esSolicitud) {
       propiedades.prioridadSugerida = { type: 'string', enum: ['BAJA', 'MEDIA', 'ALTA'] };
       requeridos.push('prioridadSugerida');
@@ -96,14 +94,13 @@ export class ClaudeAdapter implements IIAProvider {
       messages: [
         {
           role: 'user',
-          content: `Categorías vigentes: ${input.categoriasVigentes.join(', ')}\nTítulo: ${input.titulo}\nDescripción: ${input.descripcion}`,
+          content: `Título: ${input.titulo}\nDescripción: ${input.descripcion}`,
         },
       ],
     });
 
     const resultado = parsearJSONDeIA<Record<string, unknown>>(extraerTexto(response.content));
     return {
-      categoriaSugerida: String(resultado.categoriaSugerida),
       tituloSugerido: String(resultado.tituloSugerido),
       descripcionSugerida: String(resultado.descripcionSugerida),
       prioridadSugerida: (resultado.prioridadSugerida as ClasificacionResultado['prioridadSugerida']) ?? null,

@@ -290,6 +290,10 @@ body {
   font-size: 0.8125rem;
   font-weight: 600;
   white-space: nowrap;
+  /* Un badge nunca debe estirarse: sin esto, ser hijo directo de un contenedor
+     `flex-direction: column` (ej. .detalle-pagina) lo infla a todo el ancho por el
+     `align-items: stretch` por defecto — bug real visto en Solicitud/Donación/Trueque detalle. */
+  align-self: flex-start;
 }
 
 .badge--neutral {
@@ -681,6 +685,48 @@ body {
   color: var(--color-texto-tenue);
 }
 
+.publicacion-card__fecha {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-texto-tenue);
+}
+
+/* Pie de tarjeta (Solicitudes, brief adaptado 2026-07-21) — autor + cantidad de ofertas. Sin
+   reputación/estrellas: Usuario no tiene ningún campo de rating hoy. */
+.publicacion-card__pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.125rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-borde);
+}
+
+.publicacion-card__autor {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.publicacion-card__autor .avatar {
+  width: 1.5rem;
+  height: 1.5rem;
+  font-size: 0.625rem;
+}
+
+.publicacion-card__ofertas {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-secundario);
+}
+
 /* Tarjeta de contenido genérica — agrupa bloques de una página (PerfilPage, MisPublicacionesPage)
    con el mismo tratamiento visual que .publicacion-card (superficie + sombra + radio), sin ser un
    enlace clicable. */
@@ -744,6 +790,19 @@ body {
 .perfil-encabezado__correo {
   margin: 0.15rem 0 0;
   color: var(--color-texto-tenue);
+}
+
+/* Trayectoria en la comunidad (auditoría de espacio muerto 2026-07-21) — 3 tiles fijos, no
+   necesita las 4 columnas de .grid-publicaciones en pantallas grandes. */
+.perfil-stats {
+  grid-template-columns: repeat(3, 1fr);
+  margin-bottom: var(--espacio-5);
+}
+
+@media (max-width: 640px) {
+  .perfil-stats {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Lista de pares etiqueta/valor (antes un <dl> crudo) */
@@ -913,6 +972,9 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--espacio-1);
+  /* Contiene el deslizamiento horizontal de la transición entre pasos (skill motion-framer,
+     2026-07-21) para que no se salga del borde redondeado de la tarjeta. */
+  overflow: hidden;
 }
 
 /* Ritmo vertical consistente para las 3 páginas de detalle (Donación/Solicitud/Trueque) — antes un
@@ -931,11 +993,233 @@ body {
   max-width: 480px;
 }
 
+/* GaleriaImagenes (auditoría de espacio muerto 2026-07-21) — antes el detalle solo mostraba la
+   primera foto; el resto quedaba invisible para cualquiera que no fuera el dueño. */
+.galeria-imagenes__miniaturas {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  max-width: 480px;
+  overflow-x: auto;
+}
+
+.galeria-imagenes__miniatura {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  border-radius: var(--radius-base);
+  border: 2px solid transparent;
+  overflow: hidden;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.galeria-imagenes__miniatura img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.galeria-imagenes__miniatura:hover {
+  opacity: 1;
+}
+
+.galeria-imagenes__miniatura--activa {
+  border-color: var(--color-primario);
+  opacity: 1;
+}
+
+/* TarjetaAutor (auditoría de espacio muerto 2026-07-21) — identidad de quien publicó, antes
+   reducida a un link de texto suelto sin avatar ni contexto de confianza. */
+.tarjeta-autor {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  padding: var(--espacio-4);
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radius-tarjeta);
+}
+
+.tarjeta-autor__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.tarjeta-autor__nombre {
+  margin: 0;
+  font-weight: 700;
+}
+
+.tarjeta-autor__miembro-desde {
+  margin: 0.15rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--color-texto-tenue);
+}
+
+.tarjeta-autor__accion {
+  flex-shrink: 0;
+}
+
+/* Ficha de datos del detalle (auditoría de espacio muerto 2026-07-21) — reutiliza el mismo
+   dl/dt/dd que .lista-datos (PerfilPage), solo agrega el marco de tarjeta sin el margin-bottom de
+   .tarjeta (que duplicaría el gap que ya pone .detalle-pagina entre hijos). */
+.detalle-ficha {
+  padding: var(--espacio-4) var(--espacio-5);
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radius-tarjeta);
+}
+
+/* Layout de 2 columnas del detalle de Donación (rediseño 2026-07-22) — columna principal +
+   sidebar con identidad del donante, CTA de reserva y una tarjeta informativa estática. Colapsa a
+   una sola columna en pantallas angostas. */
+.detalle-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--espacio-5);
+  align-items: start;
+}
+
+/* .detalle-pagina fija max-width:720px pensando en layout de una sola columna — dentro del grid
+   de 2 columnas debe llenar su propio track en vez de quedar recortada a 720px. */
+.detalle-layout .detalle-pagina {
+  max-width: none;
+}
+
+.detalle-layout__sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+  position: sticky;
+  top: var(--espacio-5);
+}
+
+@media (max-width: 900px) {
+  .detalle-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .detalle-layout__sidebar {
+    position: static;
+  }
+}
+
+.detalle-pagina__encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+}
+
+.boton-favorito-detalle {
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.boton-favorito-detalle:hover {
+  background: var(--color-fondo);
+}
+
+.tarjeta-impacto {
+  background: var(--color-estado-neutral-bg);
+  border-color: transparent;
+}
+
+/* Favorito sobre la miniatura de PublicacionCard — .publicacion-card__imagen ya es
+   position:relative (misma base que .publicacion-card__etiqueta). */
+.publicacion-card__favorito {
+  position: absolute;
+  top: var(--espacio-2);
+  right: var(--espacio-2);
+  background: rgb(255 255 255 / 85%);
+  border: none;
+  border-radius: 999px;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+/* "¿Qué incluye?" del wizard de Donación — input + botón "Agregar" en una fila. */
+.fila-agregar-item {
+  display: flex;
+  gap: var(--espacio-2);
+}
+
+.fila-agregar-item input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radius-base);
+}
+
+/* Condición del ítem + fecha de publicación bajo el título (auditoría de espacio muerto
+   2026-07-21) — ninguna página de detalle mostraba cuándo se publicó. .detalle-pagina ya define
+   el gap entre hijos vía flex, así que solo hace falta el tratamiento tipográfico. */
+.detalle-metadata {
+  /* .detalle-pagina space los hijos con gap: 1rem — se resta acá para que la metadata quede
+     pegada al título en vez de flotar con el mismo espacio que el resto del contenido. */
+  margin-top: -0.75rem;
+  font-size: 0.875rem;
+  color: var(--color-texto-tenue);
+}
+
 /* Estado vacío / carga / error de listados (Fase 5 sección 4.1) */
 .estado-lista {
   padding: 3rem 1rem;
   text-align: center;
   color: var(--color-texto-tenue);
+}
+
+/* Estado "lista vacía" con icono + acción — reemplaza .estado-lista solo para ese caso (loading/error
+   siguen usando el bloque simple de arriba, auditoría de espacio muerto 2026-07-21). */
+.estado-vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espacio-2);
+  padding: var(--espacio-7) var(--espacio-4);
+  text-align: center;
+  border: 1px dashed var(--color-borde);
+  border-radius: var(--radius-tarjeta);
+}
+
+.estado-vacio__icono {
+  font-size: 2rem;
+  line-height: 1;
+  margin-bottom: var(--espacio-1);
+}
+
+.estado-vacio__titulo {
+  margin: 0;
+  font-weight: 700;
+  color: var(--color-texto);
+}
+
+.estado-vacio__descripcion {
+  margin: 0 0 var(--espacio-2);
+  color: var(--color-texto-tenue);
+  max-width: 40ch;
+}
+
+/* Variante para el panel de hilo sin conversación seleccionada — misma altura que el hilo real
+   (.chat-widget__mensajes--pagina) para que no "salte" el layout al elegir una conversación. */
+.conversaciones-hilo__vacio {
+  min-height: 50vh;
+  justify-content: center;
+  border-style: solid;
 }
 
 /* Aviso informativo no urgente (ej. "el estado puede no reflejar cambios recientes") — más suave
@@ -997,6 +1281,19 @@ body {
   flex-wrap: wrap;
   justify-content: center;
   margin-top: var(--espacio-3);
+}
+
+/* Franja de publicaciones recientes bajo el hero de visitante (auditoría de espacio muerto
+   2026-07-21) — el hero ya no termina en el botón de registro, sin nada abajo. */
+.inicio-recientes {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 var(--espacio-4) var(--espacio-6);
+}
+
+.inicio-recientes h2 {
+  text-align: center;
+  margin-bottom: var(--espacio-4);
 }
 
 /* Encabezado de Inicio para usuarios autenticados (saludo + acceso a Mis publicaciones). */
@@ -1111,10 +1408,26 @@ body {
 }
 
 .chat-widget__mensaje {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
   padding: 0.5rem 0.75rem;
   border-radius: var(--radius-base);
   max-width: 85%;
   font-size: 0.9375rem;
+}
+
+.chat-widget__mensaje-texto {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Hora bajo el texto (ref. MDB Chat) — solo aparece donde se renderiza (Mensajería); el chatbot
+   IA sigue usando <p> planos y no se ve afectado (mismo bloque flex, un solo hijo). */
+.chat-widget__mensaje-hora {
+  font-size: 0.6875rem;
+  align-self: flex-end;
 }
 
 .chat-widget__mensaje--usuario {
@@ -1123,9 +1436,51 @@ body {
   color: white;
 }
 
+.chat-widget__mensaje--usuario .chat-widget__mensaje-hora {
+  color: color-mix(in srgb, white 75%, transparent);
+}
+
 .chat-widget__mensaje--bot {
   align-self: flex-start;
   background: var(--color-fondo);
+}
+
+.chat-widget__mensaje--bot .chat-widget__mensaje-hora {
+  color: var(--color-texto-tenue);
+}
+
+/* Separador de día dentro del hilo (Mensajería, RF-017) — "Hoy"/"Ayer"/fecha, centrado. */
+.chat-widget__separador-dia {
+  align-self: center;
+  margin: 0.25rem 0;
+  padding: 0.15rem 0.65rem;
+  border-radius: 999px;
+  background: var(--color-borde);
+  color: var(--color-texto-tenue);
+  font-size: 0.75rem;
+}
+
+/* Bienvenida del chat cuando no hay mensajes todavía (chatbot IA y Mensajería) — icono + texto +
+   opcionalmente chips de preguntas sugeridas (auditoría de espacio muerto 2026-07-21). */
+.chat-widget__bienvenida {
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 1.5rem 1rem;
+  text-align: center;
+}
+
+.chat-widget__bienvenida-icono {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.chat-widget__bienvenida-texto {
+  margin: 0;
+  color: var(--color-texto-tenue);
+  max-width: 40ch;
 }
 
 .chat-widget__entrada {
@@ -1225,12 +1580,26 @@ body {
 
 /* Dashboard (Fase 5 sección 2.2) */
 .dashboard-stat-tile {
+  display: block;
   background: var(--color-superficie);
   border: 1px solid var(--color-borde);
   border-radius: var(--radius-tarjeta);
   box-shadow: var(--sombra-tarjeta);
   padding: var(--espacio-5) var(--espacio-4);
   text-align: center;
+}
+
+/* Variante clicable — mismo tratamiento de hover que .publicacion-card (auditoría de espacio
+   muerto 2026-07-21): un número que lleva a su listado deja de ser decoración pura. */
+.dashboard-stat-tile--enlace {
+  color: inherit;
+  text-decoration: none;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.dashboard-stat-tile--enlace:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--sombra-tarjeta-hover);
 }
 
 .dashboard-stat-tile__icono {
@@ -1250,7 +1619,8 @@ body {
   color: var(--color-texto-tenue);
 }
 
-/* Mensajería (Fase 5 sección 2.5) */
+/* Mensajería (Fase 5 sección 2.5) — lista estilo "chat window" (ref. MDB Chat): avatar, nombre
+   (nunca el correo), vista previa del último mensaje y su hora/fecha a la derecha. */
 .conversaciones-layout {
   display: flex;
   flex-direction: column;
@@ -1261,6 +1631,82 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+}
+
+.conversacion-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--radius-base);
+  color: inherit;
+}
+
+.conversacion-item:hover {
+  background: var(--color-fondo);
+}
+
+.conversacion-item--activo {
+  background: color-mix(in srgb, var(--color-primario) 12%, transparent);
+}
+
+.conversacion-item__contenido {
+  min-width: 0;
+  flex: 1;
+}
+
+.conversacion-item__fila-superior {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.conversacion-item__nombre {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conversacion-item__hora {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: var(--color-texto-tenue);
+}
+
+.conversacion-item__preview {
+  margin: 0.125rem 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-texto-tenue);
+  font-size: 0.875rem;
+}
+
+/* Contador de mensajes sin leer — mismo tratamiento visual que .badge-contador (campana de
+   notificaciones) pero en flujo normal, no superpuesto. */
+.conversacion-item__no-leidos {
+  flex-shrink: 0;
+  background: var(--color-estado-cancelado);
+  color: white;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+  border-radius: 999px;
+  padding: 0.2rem 0.4rem;
+  min-width: 1.1rem;
+  text-align: center;
+}
+
+.conversacion-hilo__encabezado {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin-bottom: 0.75rem;
+}
+
+.conversacion-hilo__encabezado h2 {
+  margin: 0;
 }
 
 @media (min-width: 768px) {
@@ -1350,6 +1796,102 @@ body {
   height: 60vh;
   min-height: 360px;
   width: 100%;
+}
+
+/* Ranking + leyenda al lado del mapa (auditoría de espacio muerto 2026-07-21) — antes el mapa
+   ocupaba toda la fila sin nada alrededor. */
+.mapa-pagina__diseno {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+}
+
+.mapa-pagina__contenedor {
+  flex: 1;
+  min-width: 0;
+}
+
+.mapa-pagina__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+}
+
+.mapa-pagina__panel h2 {
+  font-size: var(--texto-lg);
+  margin: 0 0 var(--espacio-2);
+}
+
+.mapa-pagina__panel-vacio {
+  color: var(--color-texto-tenue);
+  margin: 0;
+}
+
+.mapa-pagina__ranking {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+}
+
+.mapa-pagina__ranking li {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  padding: var(--espacio-2) var(--espacio-3);
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radius-base);
+}
+
+.mapa-pagina__ranking-puesto {
+  font-family: var(--fuente-display);
+  font-weight: 700;
+  color: var(--color-texto-tenue);
+  width: 1.25rem;
+  flex-shrink: 0;
+}
+
+.mapa-pagina__ranking-provincia {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mapa-pagina__ranking-total {
+  font-weight: 700;
+  color: var(--color-primario);
+  flex-shrink: 0;
+}
+
+.mapa-pagina__leyenda {
+  padding: var(--espacio-3);
+  border-radius: var(--radius-base);
+  background: var(--color-fondo);
+  font-size: 0.875rem;
+  color: var(--color-texto-tenue);
+}
+
+.mapa-pagina__leyenda-titulo {
+  margin: 0 0 0.25rem;
+  font-weight: 700;
+  color: var(--color-texto);
+}
+
+@media (min-width: 900px) {
+  .mapa-pagina__diseno {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .mapa-pagina__panel {
+    width: 280px;
+    flex-shrink: 0;
+  }
 }
 
 /* OfertarRapido (acción rápida desde SolicitudesPage) */

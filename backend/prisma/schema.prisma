@@ -72,6 +72,7 @@ model Usuario {
   ofertasComoDonante      OfertaSolicitud[]
   trueques                Trueque[]
   propuestasComoProponente PropuestaTrueque[]
+  reservasComoInteresado  ReservaDonacion[]
   perfiles                UsuarioPerfil[]
 
   @@index([rol])
@@ -172,15 +173,44 @@ model Donacion {
   requiereRetiro    Boolean        @default(false) @map("requiere_retiro")
   ubicacionRetiroId String?        @map("id_ubicacion_retiro") @db.Uuid
   ubicacionRetiro   Ubicacion?     @relation(fields: [ubicacionRetiroId], references: [id])
+  /// Componentes incluidos (ej. juego de sala → sofá 3 puestos, mesa de centro) — texto libre,
+  /// sin estado propio, por eso es un array nativo y no una tabla hija (a diferencia de Reserva).
+  itemsIncluidos    String[]       @default([]) @map("items_incluidos")
   fecha             DateTime       @default(now()) @db.Timestamptz
 
-  ofertas OfertaSolicitud[]
+  ofertas  OfertaSolicitud[]
+  reservas ReservaDonacion[]
 
   @@index([estadoDonacion])
   @@index([categoriaId])
   @@index([donanteId])
   @@index([fecha(sort: Desc)])
   @@map("donaciones")
+}
+
+enum EstadoReserva {
+  PENDIENTE
+  ACEPTADA
+  RECHAZADA
+
+  @@map("estado_reserva")
+}
+
+/// "Quiero este artículo" (RF nuevo, 2026-07-21) — a diferencia de PropuestaTrueque, una sola
+/// relación: una Donación nunca se ofrece a sí misma como contraparte, así que no hace falta el
+/// par origen/ofrecido que sí necesita Trueque.
+model ReservaDonacion {
+  id                  String        @id @default(uuid()) @map("id_reserva") @db.Uuid
+  donacionId          String        @map("id_donacion") @db.Uuid
+  donacion            Donacion      @relation(fields: [donacionId], references: [id])
+  usuarioInteresadoId String        @map("id_usuario_interesado") @db.Uuid
+  usuarioInteresado   Usuario       @relation(fields: [usuarioInteresadoId], references: [id])
+  mensaje             String?       @db.Text
+  estado              EstadoReserva @default(PENDIENTE)
+  fecha               DateTime      @default(now()) @db.Timestamptz
+
+  @@index([donacionId])
+  @@map("reservas_donacion")
 }
 
 model Imagen {

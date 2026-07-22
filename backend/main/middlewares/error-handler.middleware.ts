@@ -12,7 +12,17 @@ import { CategoriaNoEncontradaError } from '@application/categorias/use-cases/Ac
 import { CategoriaInvalidaError } from '@application/donaciones/use-cases/PublicarDonacionUseCase.js';
 import { DonacionNoEncontradaError } from '@application/donaciones/use-cases/ObtenerDonacionUseCase.js';
 import { NoEsDueñoDeLaDonacionError } from '@application/donaciones/use-cases/ActualizarDonacionUseCase.js';
-import { DonacionYaFinalizadaError, DonacionNoDisponibleError } from '@domain/donaciones/entities/Donacion.js';
+import {
+  DonacionYaFinalizadaError,
+  DonacionNoDisponibleError,
+  DonacionNoAceptaReservasError,
+  ReservaDuplicadaError,
+  ReservaNoEncontradaEnDonacionError,
+  ReservaYaRechazadaError,
+  ReservaYaAceptadaError,
+} from '@domain/donaciones/entities/Donacion.js';
+import { NoPuedeReservarPropiaDonacionError } from '@application/donaciones/use-cases/CrearReservaUseCase.js';
+import { EntidadInvalidaParaFavoritoError } from '@application/favoritos/use-cases/AgregarFavoritoUseCase.js';
 import { ArchivoInvalidoError } from '@domain/donaciones/ports/ICloudStorage.js';
 import { CloudinaryNoConfiguradoError } from '@adapters/donaciones/external/CloudinariaAdapter.js';
 import { CategoriaInvalidaError as CategoriaInvalidaSolicitudError } from '@application/solicitudes/use-cases/CrearSolicitudUseCase.js';
@@ -108,8 +118,10 @@ export function errorHandlerMiddleware(err: unknown, req: Request, res: Response
     err instanceof EntregaNoEncontradaError ||
     err instanceof TruequeNoEncontradoError ||
     err instanceof PropuestaNoEncontradaEnTruequeError ||
+    err instanceof ReservaNoEncontradaEnDonacionError ||
     err instanceof ConversacionNoEncontradaError ||
     err instanceof EntidadInvalidaParaMatchingError ||
+    err instanceof EntidadInvalidaParaFavoritoError ||
     err instanceof PublicacionNoEncontradaParaModerarError ||
     err instanceof UsuarioNoEncontradoParaModerarError ||
     err instanceof DestinatarioInvalidoError ||
@@ -141,7 +153,8 @@ export function errorHandlerMiddleware(err: unknown, req: Request, res: Response
     err instanceof TruequeOfrecidoInvalidoError ||
     err instanceof OrigenIgualAOfrecidoError ||
     err instanceof TruequeOfrecidoNoDisponibleError ||
-    err instanceof NoPuedeEnviarseMensajeAsiMismoError
+    err instanceof NoPuedeEnviarseMensajeAsiMismoError ||
+    err instanceof NoPuedeReservarPropiaDonacionError
   ) {
     res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: err.message } });
     return;
@@ -167,7 +180,9 @@ export function errorHandlerMiddleware(err: unknown, req: Request, res: Response
     err instanceof PropuestaDuplicadaError ||
     err instanceof PropuestaYaAceptadaError ||
     err instanceof DonacionNoDisponibleError ||
-    err instanceof TruequeYaComprometidoError
+    err instanceof TruequeYaComprometidoError ||
+    err instanceof ReservaDuplicadaError ||
+    err instanceof ReservaYaAceptadaError
   ) {
     res.status(409).json({ error: { code: 'CONFLICT', message: err.message } });
     return;
@@ -182,7 +197,9 @@ export function errorHandlerMiddleware(err: unknown, req: Request, res: Response
     err instanceof TruequeYaFinalizadoError ||
     err instanceof TruequeNoAceptaPropuestasError ||
     err instanceof PropuestaYaRechazadaError ||
-    err instanceof UsuarioYaEliminadoError
+    err instanceof UsuarioYaEliminadoError ||
+    err instanceof DonacionNoAceptaReservasError ||
+    err instanceof ReservaYaRechazadaError
   ) {
     res.status(422).json({ error: { code: 'UNPROCESSABLE', message: err.message } });
     return;

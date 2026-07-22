@@ -1,4 +1,5 @@
 import { PublicacionCard } from '@shared/components/molecules/PublicacionCard';
+import { EstadoVacio } from '@shared/components/molecules/EstadoVacio';
 import { useMisPublicaciones } from '@features/publicaciones/hooks/useMisPublicaciones';
 import type { TipoPublicacion } from '@features/publicaciones/types/index.js';
 
@@ -33,7 +34,11 @@ export function MisPublicacionesPage(): JSX.Element {
       {publicaciones.isLoading ? <p className="estado-lista">Cargando…</p> : null}
       {publicaciones.isError ? <p className="estado-lista">No se pudo cargar tu historial de publicaciones.</p> : null}
       {publicaciones.data && publicaciones.data.length === 0 ? (
-        <p className="estado-lista">Todavía no has publicado ninguna donación, solicitud o trueque.</p>
+        <EstadoVacio
+          icono="📋"
+          titulo="Todavía no has publicado nada"
+          descripcion="Cuando publiques una donación, solicitud o trueque, aparecerá aquí."
+        />
       ) : null}
 
       {publicaciones.data && publicaciones.data.length > 0 ? (

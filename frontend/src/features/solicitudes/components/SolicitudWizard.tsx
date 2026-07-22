@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { Stepper } from '@shared/components/molecules/Stepper';
 import { Input } from '@shared/components/atoms/Input';
 import { TextArea } from '@shared/components/atoms/TextArea';
@@ -28,8 +29,17 @@ const OPCIONES_URGENCIA: { valor: Urgencia; etiqueta: string }[] = [
 
 const UBICACION_VACIA: UbicacionInput = { provincia: '', ciudad: '' };
 
+// Desliza el contenido del paso en la dirección en que se navega (Siguiente/Atrás) — la dirección
+// es información real del gesto, no decoración (skill motion-framer, 2026-07-21).
+const VARIANTES_PASO = {
+  entra: (direccion: number) => ({ opacity: 0, x: direccion > 0 ? 24 : -24 }),
+  centro: { opacity: 1, x: 0 },
+  sale: (direccion: number) => ({ opacity: 0, x: direccion > 0 ? -24 : 24 }),
+};
+
 export function SolicitudWizard(): JSX.Element {
   const [paso, setPaso] = useState(1);
+  const [direccion, setDireccion] = useState(1);
   const [categoriaId, setCategoriaId] = useState('');
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -37,7 +47,6 @@ export function SolicitudWizard(): JSX.Element {
   const [evidenciaUrl, setEvidenciaUrl] = useState('');
   const [ubicacion, setUbicacion] = useState<UbicacionInput>(UBICACION_VACIA);
   const [sugerencia, setSugerencia] = useState<{
-    categoriaSugerida: string;
     tituloSugerido: string;
     descripcionSugerida: string;
     prioridadSugerida: string | null;
@@ -50,6 +59,7 @@ export function SolicitudWizard(): JSX.Element {
   const clasificar = useClasificar();
   const { mostrarToast } = useToast();
   const navigate = useNavigate();
+  const prefiereReducirMovimiento = useReducedMotion();
 
   async function sugerirConIA(): Promise<void> {
     try {
@@ -62,8 +72,6 @@ export function SolicitudWizard(): JSX.Element {
 
   function aplicarSugerencia(): void {
     if (!sugerencia) return;
-    const categoria = (categorias.data ?? []).find((c) => c.nombre === sugerencia.categoriaSugerida);
-    if (categoria) setCategoriaId(categoria.id);
     setTitulo(sugerencia.tituloSugerido);
     setDescripcion(sugerencia.descripcionSugerida);
     if (sugerencia.prioridadSugerida) setUrgencia(sugerencia.prioridadSugerida as Urgencia);
@@ -71,10 +79,12 @@ export function SolicitudWizard(): JSX.Element {
   }
 
   function siguiente(): void {
+    setDireccion(1);
     setPaso((p) => Math.min(p + 1, TOTAL_PASOS));
   }
 
   function atras(): void {
+    setDireccion(-1);
     setPaso((p) => Math.max(p - 1, 1));
   }
 
@@ -114,6 +124,16 @@ export function SolicitudWizard(): JSX.Element {
     <div className="wizard">
       <Stepper pasoActual={paso} totalPasos={TOTAL_PASOS} etiqueta={etiquetasPaso[paso - 1]!} />
 
+      <AnimatePresence mode="wait" custom={direccion} initial={false}>
+      <motion.div
+        key={paso}
+        custom={direccion}
+        variants={VARIANTES_PASO}
+        initial="entra"
+        animate="centro"
+        exit="sale"
+        transition={{ duration: prefiereReducirMovimiento ? 0 : 0.22, ease: 'easeOut' }}
+      >
       {paso === 1 ? (
         <>
           <Select
@@ -150,14 +170,20 @@ export function SolicitudWizard(): JSX.Element {
       ) : null}
 
       {paso === 3 ? (
-        <Input
-          label="Enlace de evidencia (opcional)"
-          name="evidenciaUrl"
-          type="url"
-          placeholder="https://…"
-          value={evidenciaUrl}
-          onChange={(e) => setEvidenciaUrl(e.target.value)}
-        />
+        <div>
+          <p className="aviso-info">
+            Un enlace a una foto o documento (ej. una receta médica, una foto del objeto dañado) ayuda a que los donantes
+            confíen más en tu solicitud. Puedes subirlo a Google Drive, Imgur u otro servicio y pegar el enlace acá.
+          </p>
+          <Input
+            label="Enlace de evidencia (opcional)"
+            name="evidenciaUrl"
+            type="url"
+            placeholder="https://…"
+            value={evidenciaUrl}
+            onChange={(e) => setEvidenciaUrl(e.target.value)}
+          />
+        </div>
       ) : null}
 
       {paso === 4 ? (
@@ -186,6 +212,8 @@ export function SolicitudWizard(): JSX.Element {
           />
         </div>
       ) : null}
+      </motion.div>
+      </AnimatePresence>
 
       <div className="wizard__acciones">
         <Button type="button" variant="secundario" onClick={atras} disabled={paso === 1}>

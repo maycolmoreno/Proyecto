@@ -42,6 +42,16 @@ export function MapaPage(): JSX.Element {
     }
   }
 
+  // Ranking textual al lado del mapa (auditoría de espacio muerto 2026-07-21) — mismos datos ya
+  // agregados que alimentan los círculos, sin pedir nada nuevo al backend.
+  const ranking = PROVINCIAS_ECUADOR.map((provincia) => {
+    const conteo = conteoPorProvincia.get(provincia)!;
+    return { provincia, ...conteo, total: conteo.donaciones + conteo.solicitudes };
+  })
+    .filter((p) => p.total > 0)
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 5);
+
   return (
     <div>
       <div className="pagina-encabezado">
@@ -54,42 +64,67 @@ export function MapaPage(): JSX.Element {
 
       {cargando ? <p className="estado-lista">Cargando mapa…</p> : null}
 
-      <div className="mapa-pagina__contenedor">
-        <MapContainer
-          center={CENTRO_ECUADOR}
-          zoom={ZOOM_INICIAL_ECUADOR}
-          scrollWheelZoom={false}
-          className="mapa-pagina__mapa"
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          {PROVINCIAS_ECUADOR.map((provincia) => {
-            const conteo = conteoPorProvincia.get(provincia)!;
-            const total = conteo.donaciones + conteo.solicitudes;
-            if (total === 0) return null;
-            // Non-null: PROVINCIAS_ECUADOR y COORDENADAS_PROVINCIA comparten exactamente las
-            // mismas 24 claves (provincias-coordenadas.ts), TS no puede inferirlo desde .map().
-            const [lat, lng] = COORDENADAS_PROVINCIA[provincia]!;
-            return (
-              <CircleMarker
-                key={provincia}
-                center={[lat, lng]}
-                radius={Math.min(8 + total * 3, 36)}
-                pathOptions={{ color: COLOR_MARCADOR, fillColor: COLOR_MARCADOR, fillOpacity: 0.45, weight: 2 }}
-              >
-                <Popup>
-                  <strong>{provincia}</strong>
-                  <br />
-                  🎁 {conteo.donaciones} {conteo.donaciones === 1 ? 'donación' : 'donaciones'}
-                  <br />
-                  🙏 {conteo.solicitudes} {conteo.solicitudes === 1 ? 'solicitud' : 'solicitudes'}
-                </Popup>
-              </CircleMarker>
-            );
-          })}
-        </MapContainer>
+      <div className="mapa-pagina__diseno">
+        <div className="mapa-pagina__contenedor">
+          <MapContainer
+            center={CENTRO_ECUADOR}
+            zoom={ZOOM_INICIAL_ECUADOR}
+            scrollWheelZoom={false}
+            className="mapa-pagina__mapa"
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+              url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            {PROVINCIAS_ECUADOR.map((provincia) => {
+              const conteo = conteoPorProvincia.get(provincia)!;
+              const total = conteo.donaciones + conteo.solicitudes;
+              if (total === 0) return null;
+              // Non-null: PROVINCIAS_ECUADOR y COORDENADAS_PROVINCIA comparten exactamente las
+              // mismas 24 claves (provincias-coordenadas.ts), TS no puede inferirlo desde .map().
+              const [lat, lng] = COORDENADAS_PROVINCIA[provincia]!;
+              return (
+                <CircleMarker
+                  key={provincia}
+                  center={[lat, lng]}
+                  radius={Math.min(8 + total * 3, 36)}
+                  pathOptions={{ color: COLOR_MARCADOR, fillColor: COLOR_MARCADOR, fillOpacity: 0.45, weight: 2 }}
+                >
+                  <Popup>
+                    <strong>{provincia}</strong>
+                    <br />
+                    🎁 {conteo.donaciones} {conteo.donaciones === 1 ? 'donación' : 'donaciones'}
+                    <br />
+                    🙏 {conteo.solicitudes} {conteo.solicitudes === 1 ? 'solicitud' : 'solicitudes'}
+                  </Popup>
+                </CircleMarker>
+              );
+            })}
+          </MapContainer>
+        </div>
+
+        <aside className="mapa-pagina__panel">
+          <div>
+            <h2>Provincias con más actividad</h2>
+            {ranking.length === 0 ? (
+              <p className="mapa-pagina__panel-vacio">Todavía no hay publicaciones activas con ubicación.</p>
+            ) : (
+              <ol className="mapa-pagina__ranking">
+                {ranking.map((p, i) => (
+                  <li key={p.provincia}>
+                    <span className="mapa-pagina__ranking-puesto">{i + 1}</span>
+                    <span className="mapa-pagina__ranking-provincia">{p.provincia}</span>
+                    <span className="mapa-pagina__ranking-total">{p.total}</span>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
+          <div className="mapa-pagina__leyenda">
+            <p className="mapa-pagina__leyenda-titulo">Cómo leer el mapa</p>
+            <p>El tamaño de cada círculo representa el total de donaciones y solicitudes activas en esa provincia.</p>
+          </div>
+        </aside>
       </div>
     </div>
   );

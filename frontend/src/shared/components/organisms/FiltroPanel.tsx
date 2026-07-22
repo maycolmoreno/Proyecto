@@ -7,8 +7,9 @@ import type { OpcionSelect } from '@shared/components/atoms/Select';
 export interface DefinicionFiltro {
   campo: string;
   etiqueta: string;
-  opciones: OpcionSelect[];
-  variante?: 'select' | 'chips';
+  /** No aplica (ni se usa) con `variante: 'texto'` — no hay opciones fijas que listar. */
+  opciones?: OpcionSelect[];
+  variante?: 'select' | 'chips' | 'texto';
 }
 
 interface FiltroPanelProps {
@@ -20,28 +21,45 @@ interface FiltroPanelProps {
 export function FiltroPanel({ definiciones, valores, onCambiar }: FiltroPanelProps): JSX.Element {
   return (
     <div className="filtro-panel">
-      {definiciones.map((definicion) =>
-        definicion.variante === 'chips' ? (
-          <div key={definicion.campo} className="chips" role="group" aria-label={definicion.etiqueta}>
-            <button
-              type="button"
-              className={`chip ${!valores[definicion.campo] ? 'chip--activo' : ''}`}
-              onClick={() => onCambiar(definicion.campo, '')}
-            >
-              Todas
-            </button>
-            {definicion.opciones.map((opcion) => (
+      {definiciones.map((definicion) => {
+        if (definicion.variante === 'texto') {
+          return (
+            <input
+              key={definicion.campo}
+              type="text"
+              aria-label={definicion.etiqueta}
+              placeholder={definicion.etiqueta}
+              value={valores[definicion.campo] ?? ''}
+              onChange={(e) => onCambiar(definicion.campo, e.target.value)}
+            />
+          );
+        }
+
+        if (definicion.variante === 'chips') {
+          return (
+            <div key={definicion.campo} className="chips" role="group" aria-label={definicion.etiqueta}>
               <button
-                key={opcion.valor}
                 type="button"
-                className={`chip ${valores[definicion.campo] === opcion.valor ? 'chip--activo' : ''}`}
-                onClick={() => onCambiar(definicion.campo, opcion.valor)}
+                className={`chip ${!valores[definicion.campo] ? 'chip--activo' : ''}`}
+                onClick={() => onCambiar(definicion.campo, '')}
               >
-                {opcion.etiqueta}
+                Todas
               </button>
-            ))}
-          </div>
-        ) : (
+              {(definicion.opciones ?? []).map((opcion) => (
+                <button
+                  key={opcion.valor}
+                  type="button"
+                  className={`chip ${valores[definicion.campo] === opcion.valor ? 'chip--activo' : ''}`}
+                  onClick={() => onCambiar(definicion.campo, opcion.valor)}
+                >
+                  {opcion.etiqueta}
+                </button>
+              ))}
+            </div>
+          );
+        }
+
+        return (
           <select
             key={definicion.campo}
             aria-label={definicion.etiqueta}
@@ -49,14 +67,14 @@ export function FiltroPanel({ definiciones, valores, onCambiar }: FiltroPanelPro
             onChange={(e) => onCambiar(definicion.campo, e.target.value)}
           >
             <option value="">{definicion.etiqueta}</option>
-            {definicion.opciones.map((opcion) => (
+            {(definicion.opciones ?? []).map((opcion) => (
               <option key={opcion.valor} value={opcion.valor}>
                 {opcion.etiqueta}
               </option>
             ))}
           </select>
-        ),
-      )}
+        );
+      })}
     </div>
   );
 }
