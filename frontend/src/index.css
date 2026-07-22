@@ -44,6 +44,63 @@
   --color-urgencia-media-bg: #fbead2;
   --color-urgencia-alta: #e85d2f;
   --color-urgencia-alta-bg: #fbe0d5;
+
+  /* Escala tipográfica — clamp() fluido entre mobile-pequeño (320px) y desktop (1024-1440px, la
+     escala deja de crecer más allá porque a ese ancho el contenido ya usa max-width, no vw
+     completo). Reemplaza los valores rem sueltos que antes se repetían por regla. */
+  --texto-xs: clamp(0.75rem, 0.72rem + 0.15vw, 0.8125rem);
+  --texto-sm: clamp(0.8125rem, 0.78rem + 0.2vw, 0.875rem);
+  --texto-base: clamp(0.9375rem, 0.9rem + 0.25vw, 1rem);
+  --texto-lg: clamp(1.0625rem, 1rem + 0.35vw, 1.1875rem);
+  --texto-xl: clamp(1.25rem, 1.15rem + 0.55vw, 1.5rem);
+  --texto-2xl: clamp(1.625rem, 1.45rem + 0.95vw, 2rem);
+  --texto-3xl: clamp(2rem, 1.7rem + 1.6vw, 2.75rem);
+
+  /* Escala de espaciado (grid de 4px). */
+  --espacio-1: 0.25rem;
+  --espacio-2: 0.5rem;
+  --espacio-3: 0.75rem;
+  --espacio-4: 1rem;
+  --espacio-5: 1.5rem;
+  --espacio-6: 2rem;
+  --espacio-7: 3rem;
+  --espacio-8: 4rem;
+}
+
+/* Modo oscuro real — `color-scheme: light dark` (arriba) lo declaraba desde el inicio pero nunca
+   se implementó. Misma identidad (terracota/jade/dorado), solo se redefinen los tokens de COLOR
+   (nunca tipografía/espaciado) con luminosidad invertida para contraste sobre fondo oscuro. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-primario: #ff8259;
+    --color-primario-oscuro: #e85d2f;
+    --color-secundario: #4fae90;
+    --color-secundario-oscuro: #327a63;
+    --color-acento: #ffcf52;
+    --color-texto: #f3ede2;
+    --color-texto-tenue: #b8a996;
+    --color-borde: #3a3226;
+    --color-superficie: #221d16;
+    --color-fondo: #17140f;
+    --sombra-tarjeta: 0 2px 8px rgb(0 0 0 / 30%);
+    --sombra-tarjeta-hover: 0 8px 24px rgb(0 0 0 / 45%);
+
+    --color-estado-neutral: #7fd6bb;
+    --color-estado-neutral-bg: #1c332c;
+    --color-estado-progreso: #f0b56b;
+    --color-estado-progreso-bg: #3a2a14;
+    --color-estado-exito: #7bd39f;
+    --color-estado-exito-bg: #1a3324;
+    --color-estado-cancelado: #ff9c74;
+    --color-estado-cancelado-bg: #3a2018;
+
+    --color-urgencia-baja: #b8a996;
+    --color-urgencia-baja-bg: #2c261c;
+    --color-urgencia-media: #f0b56b;
+    --color-urgencia-media-bg: #3a2a14;
+    --color-urgencia-alta: #ff8259;
+    --color-urgencia-alta-bg: #3d2419;
+  }
 }
 
 h1, h2, h3 {
@@ -51,6 +108,10 @@ h1, h2, h3 {
   font-weight: 700;
   letter-spacing: -0.01em;
 }
+
+h1 { font-size: var(--texto-3xl); }
+h2 { font-size: var(--texto-2xl); }
+h3 { font-size: var(--texto-xl); }
 
 * {
   box-sizing: border-box;
@@ -68,6 +129,63 @@ body {
   max-width: 480px;
   margin: 0 auto;
   padding: 2rem 1rem;
+}
+
+/* Variante para Login/Registro — centra la tarjeta verticalmente en la pantalla en vez de quedar
+   pegada arriba, con un resplandor suave de la paleta ya aprobada detrás (no un gradiente
+   genérico: mismo terracota/dorado del resto de la app, muy tenue). */
+.pagina-angosta--auth {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  background:
+    radial-gradient(60% 50% at 15% 10%, color-mix(in srgb, var(--color-primario) 10%, transparent), transparent),
+    radial-gradient(50% 45% at 100% 100%, color-mix(in srgb, var(--color-secundario) 10%, transparent), transparent);
+}
+
+.auth-card {
+  width: 100%;
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radius-tarjeta);
+  box-shadow: var(--sombra-tarjeta);
+  padding: var(--espacio-6) var(--espacio-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-5);
+}
+
+.auth-card__encabezado {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+}
+
+.auth-card__marca {
+  font-family: var(--fuente-display);
+  font-weight: 700;
+  font-size: var(--texto-sm);
+  color: var(--color-primario);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.auth-card__encabezado h1 {
+  margin: 0;
+  font-size: var(--texto-2xl);
+}
+
+.auth-card__subtitulo {
+  margin: 0;
+  color: var(--color-texto-tenue);
+  font-size: var(--texto-base);
+}
+
+.auth-card__pie {
+  margin: 0;
+  text-align: center;
+  font-size: var(--texto-sm);
+  color: var(--color-texto-tenue);
 }
 
 .form-field {
@@ -92,6 +210,34 @@ body {
   font-size: 1rem;
   font-family: inherit;
   min-height: var(--espaciado-touch-min);
+}
+
+/* Grupo de checkboxes dentro de un <fieldset> (perfiles en RegistroForm/PerfilPage) — antes cada
+   <label> llevaba un inline style={{display:'block'}} repetido. */
+.form-field--opciones legend {
+  font-weight: 600;
+  margin-bottom: var(--espacio-2);
+  padding: 0;
+}
+
+.opcion-checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  padding: var(--espacio-2) var(--espacio-3);
+  border-radius: var(--radius-base);
+  cursor: pointer;
+}
+
+.opcion-checkbox:hover {
+  background: var(--color-fondo);
+}
+
+.opcion-checkbox input[type='checkbox'] {
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: var(--color-primario);
+  flex-shrink: 0;
 }
 
 .btn {
@@ -179,6 +325,16 @@ body {
 .badge--urgencia-alta {
   color: var(--color-urgencia-alta);
   background: var(--color-urgencia-alta-bg);
+}
+
+/* Etiqueta de tipo en el feed unificado "Mis publicaciones" — no es un estado (bueno/malo), solo
+   una categoría, así que usa un tono neutro discreto en vez de la paleta semántica de --color-estado-*. */
+.badge--tipo {
+  color: var(--color-texto-tenue);
+  background: var(--color-borde);
+  text-transform: uppercase;
+  font-size: 0.6875rem;
+  letter-spacing: 0.03em;
 }
 
 /* Avatar */
@@ -525,6 +681,102 @@ body {
   color: var(--color-texto-tenue);
 }
 
+/* Tarjeta de contenido genérica — agrupa bloques de una página (PerfilPage, MisPublicacionesPage)
+   con el mismo tratamiento visual que .publicacion-card (superficie + sombra + radio), sin ser un
+   enlace clicable. */
+.tarjeta {
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radius-tarjeta);
+  box-shadow: var(--sombra-tarjeta);
+  padding: var(--espacio-5);
+  margin-bottom: var(--espacio-4);
+}
+
+/* Tabs (role="tablist") — antes botones HTML sin ninguna clase en PerfilPage/AdminPage. */
+.tabs {
+  display: flex;
+  gap: var(--espacio-5);
+  border-bottom: 1px solid var(--color-borde);
+  margin-bottom: var(--espacio-5);
+}
+
+.tabs__item {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: var(--espacio-3) 0;
+  font-family: inherit;
+  font-size: var(--texto-base);
+  font-weight: 600;
+  color: var(--color-texto-tenue);
+  cursor: pointer;
+}
+
+.tabs__item[aria-selected='true'] {
+  color: var(--color-primario);
+  border-bottom-color: var(--color-primario);
+}
+
+.tabs__item:hover {
+  color: var(--color-texto);
+}
+
+/* Encabezado de PerfilPage — nombre + avatar grande (Avatar.tsx es 2.25rem por defecto en la
+   navbar; en esta página el rol es distinto, así que se escala solo en este contexto). */
+.perfil-encabezado {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-4);
+  margin-bottom: var(--espacio-5);
+}
+
+.perfil-encabezado h1 {
+  margin: 0;
+}
+
+.perfil-encabezado .avatar {
+  width: 4rem;
+  height: 4rem;
+  font-size: var(--texto-xl);
+}
+
+.perfil-encabezado__correo {
+  margin: 0.15rem 0 0;
+  color: var(--color-texto-tenue);
+}
+
+/* Lista de pares etiqueta/valor (antes un <dl> crudo) */
+.lista-datos {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+}
+
+.lista-datos__fila {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  padding-bottom: var(--espacio-3);
+  border-bottom: 1px solid var(--color-borde);
+}
+
+.lista-datos__fila:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.lista-datos__fila dt {
+  color: var(--color-texto-tenue);
+  font-size: var(--texto-sm);
+}
+
+.lista-datos__fila dd {
+  margin: 0;
+  font-weight: 600;
+}
+
 /* Stepper (Fase 5 sección 2.4) */
 .stepper {
   margin-bottom: 1.5rem;
@@ -640,11 +892,61 @@ body {
   margin-top: 1.5rem;
 }
 
+/* Fila de acciones genérica (ej. paginación) — antes los 3 listados reutilizaban .wizard__acciones
+   fuera de contexto (fuga de nombre: esa clase es del wizard de publicar, no de paginar). */
+.fila-acciones {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--espacio-5);
+}
+
+/* Contenedor de los 3 wizards de publicación — la clase "wizard" se usaba en el JSX desde el
+   inicio (DonacionWizard/SolicitudWizard/TruequeWizard) pero nunca tuvo una regla CSS propia. */
+.wizard {
+  max-width: 560px;
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radius-tarjeta);
+  box-shadow: var(--sombra-tarjeta);
+  padding: var(--espacio-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+}
+
+/* Ritmo vertical consistente para las 3 páginas de detalle (Donación/Solicitud/Trueque) — antes un
+   <div> plano donde cada bloque quedaba pegado al siguiente sin espaciado deliberado. Pasada
+   ligera: solo layout/spacing, no reestructura el contenido ni los subcomponentes. */
+.detalle-pagina {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+  max-width: 720px;
+}
+
+/* Antes un inline style={{aspectRatio:'16/9', maxWidth:480}} duplicado en 2 páginas de detalle. */
+.detalle-imagen-hero {
+  aspect-ratio: 16 / 9;
+  max-width: 480px;
+}
+
 /* Estado vacío / carga / error de listados (Fase 5 sección 4.1) */
 .estado-lista {
   padding: 3rem 1rem;
   text-align: center;
   color: var(--color-texto-tenue);
+}
+
+/* Aviso informativo no urgente (ej. "el estado puede no reflejar cambios recientes") — más suave
+   que .form-field__error, que usa el color de estado-cancelado para errores reales de validación. */
+.aviso-info {
+  margin: 0 0 1rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--radius-base);
+  background: var(--color-estado-neutral-bg);
+  color: var(--color-secundario-oscuro);
+  font-size: 0.875rem;
 }
 
 .pagina-encabezado {
@@ -654,6 +956,66 @@ body {
   flex-wrap: wrap;
   gap: 0.75rem;
   margin-bottom: 1rem;
+}
+
+/* Hero de Inicio para visitantes anónimos — antes un <h1>+<p> plano sin ninguna composición. */
+.hero {
+  padding: var(--espacio-8) var(--espacio-4);
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espacio-3);
+}
+
+.hero__eyebrow {
+  font-family: var(--fuente-display);
+  font-weight: 700;
+  font-size: var(--texto-sm);
+  color: var(--color-secundario);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.hero h1 {
+  margin: 0;
+  text-wrap: balance;
+}
+
+.hero__subtitulo {
+  margin: 0;
+  color: var(--color-texto-tenue);
+  font-size: var(--texto-lg);
+  max-width: 46ch;
+}
+
+.hero__acciones {
+  display: flex;
+  gap: var(--espacio-3);
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: var(--espacio-3);
+}
+
+/* Encabezado de Inicio para usuarios autenticados (saludo + acceso a Mis publicaciones). */
+.inicio-saludo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--espacio-3);
+  margin-bottom: var(--espacio-5);
+}
+
+.inicio-saludo h1 {
+  margin: 0;
+}
+
+.inicio-saludo__subtitulo {
+  margin: 0.25rem 0 0;
+  color: var(--color-texto-tenue);
 }
 
 .oferta-item {
@@ -863,24 +1225,28 @@ body {
 
 /* Dashboard (Fase 5 sección 2.2) */
 .dashboard-stat-tile {
+  background: var(--color-superficie);
   border: 1px solid var(--color-borde);
-  border-radius: var(--radius-base);
-  padding: 1rem;
+  border-radius: var(--radius-tarjeta);
+  box-shadow: var(--sombra-tarjeta);
+  padding: var(--espacio-5) var(--espacio-4);
   text-align: center;
 }
 
 .dashboard-stat-tile__icono {
-  font-size: 1.5rem;
+  font-size: var(--texto-2xl);
 }
 
 .dashboard-stat-tile__valor {
-  font-size: 1.75rem;
+  font-family: var(--fuente-display);
+  font-size: var(--texto-2xl);
   font-weight: 700;
+  color: var(--color-primario);
   margin: 0.25rem 0;
 }
 
 .dashboard-stat-tile__etiqueta {
-  font-size: 0.8125rem;
+  font-size: var(--texto-xs);
   color: var(--color-texto-tenue);
 }
 
@@ -912,4 +1278,153 @@ body {
     flex: 1;
     min-width: 0;
   }
+}
+
+/* Footer (organismo compartido) — franja de pie del shell, no crece NAV_ITEMS (ADR-020). */
+.footer {
+  margin-top: var(--espacio-8);
+  padding: var(--espacio-6) var(--espacio-2) var(--espacio-4);
+  border-top: 1px solid var(--color-borde);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espacio-2);
+  text-align: center;
+}
+
+.footer__marca {
+  font-family: var(--fuente-display);
+  font-weight: 700;
+  color: var(--color-primario);
+}
+
+.footer__links {
+  display: flex;
+  gap: var(--espacio-5);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.footer__links a {
+  color: var(--color-texto-tenue);
+  text-decoration: none;
+  font-size: var(--texto-sm);
+  font-weight: 600;
+}
+
+.footer__links a:hover {
+  color: var(--color-primario);
+  text-decoration: underline;
+}
+
+.footer__nota {
+  margin: 0;
+  font-size: var(--texto-xs);
+  color: var(--color-texto-tenue);
+  max-width: 46ch;
+}
+
+/* Link secundario debajo de los botones del hero (Inicio, visitante anónimo). */
+.hero__link-secundario {
+  color: var(--color-secundario);
+  font-size: var(--texto-sm);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+/* MapaPage */
+.mapa-pagina__ayuda {
+  color: var(--color-texto-tenue);
+  margin: 0 0 var(--espacio-4);
+  max-width: 60ch;
+}
+
+.mapa-pagina__contenedor {
+  border-radius: var(--radius-tarjeta);
+  overflow: hidden;
+  box-shadow: var(--sombra-tarjeta);
+  border: 1px solid var(--color-borde);
+}
+
+.mapa-pagina__mapa {
+  height: 60vh;
+  min-height: 360px;
+  width: 100%;
+}
+
+/* OfertarRapido (acción rápida desde SolicitudesPage) */
+.publicacion-card-envoltorio {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+}
+
+.ofertar-rapido {
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radius-base);
+  padding: var(--espacio-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+}
+
+.ofertar-rapido__vacio {
+  margin: 0;
+  font-size: var(--texto-sm);
+  color: var(--color-texto-tenue);
+}
+
+.ofertar-rapido__acciones {
+  display: flex;
+  gap: var(--espacio-2);
+  justify-content: flex-end;
+}
+
+/* ComoFuncionaPage */
+.como-funciona__flujo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+}
+
+.como-funciona__flujo h2 {
+  margin: 0;
+}
+
+.como-funciona__pasos {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  color: var(--color-texto-tenue);
+}
+
+.como-funciona__seccion-titulo {
+  margin: var(--espacio-7) 0 var(--espacio-4);
+  text-align: center;
+}
+
+/* SelectorUbicacion — toggle "usar ubicación registrada / nueva" en los wizards y en PerfilPage. */
+.selector-ubicacion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+}
+
+.selector-ubicacion__opciones {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radius-base);
+  padding: var(--espacio-2);
+}
+
+.selector-ubicacion__opciones input[type='radio'] {
+  accent-color: var(--color-primario);
+  width: 1.15rem;
+  height: 1.15rem;
+  flex-shrink: 0;
 }

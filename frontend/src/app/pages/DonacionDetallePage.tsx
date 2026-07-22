@@ -39,8 +39,8 @@ export function DonacionDetallePage(): JSX.Element {
   }
 
   return (
-    <div>
-      <div className="publicacion-card__imagen" style={{ aspectRatio: '16/9', maxWidth: 480 }}>
+    <div className="detalle-pagina">
+      <div className="publicacion-card__imagen detalle-imagen-hero">
         {donacion.data.imagenes[0] ? (
           <img src={donacion.data.imagenes[0]} alt="" />
         ) : (

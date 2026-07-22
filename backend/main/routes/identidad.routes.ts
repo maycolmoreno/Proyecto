@@ -14,5 +14,10 @@ router.get('/usuarios/me', authMiddleware, usuariosController.me);
 // Extensión post-cierre (Sprint F5 frontend) — declarada después de /usuarios/me (Express resuelve
 // por orden; :id capturaría "me" si fuera declarada antes, mismo criterio que entregas.routes.ts).
 router.get('/usuarios/:id', authMiddleware, usuariosController.obtenerPorId);
+// Opción D, Fase 2 (docs/DISENO_MODELO_PERFILES.md). Verbo PATCH, sin colisión de orden con el
+// GET /usuarios/:id de arriba (verbos distintos).
+router.patch('/usuarios/me/perfiles', authMiddleware, usuariosController.actualizarPerfiles);
+// Ubicación de perfil — cierra el gap documentado en PerfilPage.tsx (tab "Ubicación" sin backend).
+router.patch('/usuarios/me/ubicacion', authMiddleware, usuariosController.actualizarUbicacion);
 
 export { router as identidadRouter };

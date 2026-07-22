@@ -15,8 +15,11 @@ import { useResponderPropuesta } from '@features/trueques/hooks/useResponderProp
 import { useImagenesTrueque } from '@features/trueques/hooks/useImagenesTrueque';
 import { CoordinacionEntrega } from '@features/entregas/components/CoordinacionEntrega';
 import { MatchesSugeridos } from '@features/ia/components/MatchesSugeridos';
+import type { PerfilFuncional } from '@features/identidad/types/index.js';
 
-const ROLES_PUEDEN_PROPONER = ['DONANTE', 'USUARIO_COMUNIDAD'];
+// Opción D, Fase 3 (docs/DISENO_MODELO_PERFILES.md) — antes ROLES_PUEDEN_PROPONER con rol.
+// COMUNIDAD removido (ADR-049).
+const PERFILES_PUEDEN_PROPONER: PerfilFuncional[] = ['TRUEQUE'];
 
 export function TruequeDetallePage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
@@ -49,7 +52,7 @@ export function TruequeDetallePage(): JSX.Element {
   const puedeProponer =
     sesion.data &&
     !esDueño &&
-    ROLES_PUEDEN_PROPONER.includes(sesion.data.rol) &&
+    PERFILES_PUEDEN_PROPONER.some((p) => sesion.data.perfiles.includes(p)) &&
     (trueque.data.estadoTrueque === 'PUBLICADO' || trueque.data.estadoTrueque === 'PROPUESTA_RECIBIDA') &&
     !miPropuestaActiva;
   // Este trueque es el "ofrecido" de una negociación (no el origen) si está en coordinación/
@@ -101,8 +104,8 @@ export function TruequeDetallePage(): JSX.Element {
   }
 
   return (
-    <div>
-      <div className="publicacion-card__imagen" style={{ aspectRatio: '16/9', maxWidth: 480 }}>
+    <div className="detalle-pagina">
+      <div className="publicacion-card__imagen detalle-imagen-hero">
         {trueque.data.imagenes[0] ? <img src={trueque.data.imagenes[0]} alt="" /> : <span aria-hidden="true">📦</span>}
       </div>
       <StatusBadge estado={trueque.data.estadoTrueque} />

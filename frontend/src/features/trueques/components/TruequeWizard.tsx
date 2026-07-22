@@ -12,7 +12,10 @@ import { useCategorias } from '@features/categorias/hooks/useCategorias';
 import { useClasificar } from '@features/ia/hooks/useClasificar';
 import { useCrearTrueque } from '../hooks/useCrearTrueque.js';
 import { truequesApi } from '../api/trueques.api.js';
-import type { EstadoObjeto } from '../types/index.js';
+import { ApiError } from '@shared/lib/http-client';
+import { useMatches } from '@features/ia/hooks/useMatches';
+import { MatchesSugeridos } from '@features/ia/components/MatchesSugeridos';
+import type { EstadoObjeto, Trueque } from '../types/index.js';
 
 // Fase 5, sección 2.4 — 5 pasos. Mismo problema de secuencia que DonacionWizard (el backend exige
 // que el Trueque exista para firmar subida de fotos) — el paso 3 solo acumula archivos en memoria;
@@ -39,6 +42,7 @@ export function TruequeWizard(): JSX.Element {
   const [archivos, setArchivos] = useState<File[]>([]);
   const [queBuscas, setQueBuscas] = useState('');
   const [publicando, setPublicando] = useState(false);
+  const [truequePublicado, setTruequePublicado] = useState<Trueque | null>(null);
   const [sugerencia, setSugerencia] = useState<{
     categoriaSugerida: string;
     tituloSugerido: string;
@@ -52,6 +56,9 @@ export function TruequeWizard(): JSX.Element {
   const clasificar = useClasificar();
   const { mostrarToast } = useToast();
   const navigate = useNavigate();
+  // Se dispara ni bien hay id (mismo query que MatchesSugeridos, TanStack Query la deduplica) —
+  // se usa acá solo para controlar los mensajes de carga/vacío/error del paso de resultado.
+  const matches = useMatches('TRUEQUE', truequePublicado?.id);
 
   async function sugerirConIA(): Promise<void> {
     try {
@@ -106,9 +113,10 @@ export function TruequeWizard(): JSX.Element {
       }
 
       mostrarToast('Trueque publicado con éxito.', 'exito');
-      navigate(`/trueques/${trueque.id}`);
-    } catch {
-      mostrarToast('No se pudo publicar el trueque. Intenta de nuevo.', 'error');
+      setTruequePublicado(trueque);
+    } catch (error) {
+      const mensaje = error instanceof ApiError ? error.message : 'No se pudo publicar el trueque. Intenta de nuevo.';
+      mostrarToast(mensaje, 'error');
     } finally {
       setPublicando(false);
     }
@@ -120,6 +128,31 @@ export function TruequeWizard(): JSX.Element {
   // usa <form onSubmit>, así que hay que bloquear el avance explícitamente en JS.
   const puedeAvanzar =
     paso === 1 ? Boolean(categoriaId && titulo) : paso === 2 ? Boolean(descripcion) : true;
+
+  // Tras publicar, en vez de redirigir directo al detalle, buscamos coincidencias con otros
+  // trueques ya en el mismo paso (RF-016) — el usuario decide desde acá si quiere proponer un
+  // intercambio o simplemente ir a ver su publicación.
+  if (truequePublicado) {
+    return (
+      <div className="wizard">
+        <h2>¡Trueque publicado con éxito!</h2>
+        <p>Buscamos otros trueques publicados que podrían interesarte para intercambiar.</p>
+        {matches.isLoading ? <p className="estado-lista">Buscando coincidencias…</p> : null}
+        {matches.isError ? (
+          <p className="estado-lista">No se pudieron cargar las coincidencias sugeridas. Podés verlas más tarde desde tu trueque.</p>
+        ) : null}
+        {!matches.isLoading && !matches.isError && matches.items.length === 0 ? (
+          <p className="estado-lista">Por ahora no encontramos coincidencias. Te avisaremos si aparece alguna.</p>
+        ) : null}
+        <MatchesSugeridos entidadTipo="TRUEQUE" entidadId={truequePublicado.id} />
+        <div className="wizard__acciones">
+          <Button type="button" onClick={() => navigate(`/trueques/${truequePublicado.id}`)}>
+            Ver mi trueque
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="wizard">

@@ -7,8 +7,11 @@ import { useSesion } from '@features/identidad/hooks/useSesion';
 import { useCategorias } from '@features/categorias/hooks/useCategorias';
 import { useDonaciones } from '@features/donaciones/hooks/useDonaciones';
 import type { EstadoDonacion, ListarDonacionesFiltros } from '@features/donaciones/types/index.js';
+import type { PerfilFuncional } from '@features/identidad/types/index.js';
 
-const ROLES_PUEDEN_PUBLICAR = ['DONANTE', 'USUARIO_COMUNIDAD'];
+// Opción D, Fase 3 (docs/DISENO_MODELO_PERFILES.md) — antes ROLES_PUEDEN_PUBLICAR con rol.
+// COMUNIDAD removido (ADR-049).
+const PERFILES_PUEDEN_PUBLICAR: PerfilFuncional[] = ['DONANTE'];
 const OPCIONES_ESTADO: { valor: EstadoDonacion; etiqueta: string }[] = [
   { valor: 'PUBLICADA', etiqueta: 'Publicada' },
   { valor: 'APROBADA', etiqueta: 'Aprobada' },
@@ -21,7 +24,7 @@ export function DonacionesPage(): JSX.Element {
   const categorias = useCategorias();
   const donaciones = useDonaciones(filtros);
 
-  const puedePublicar = sesion.data && ROLES_PUEDEN_PUBLICAR.includes(sesion.data.rol);
+  const puedePublicar = sesion.data && PERFILES_PUEDEN_PUBLICAR.some((p) => sesion.data.perfiles.includes(p));
 
   function cambiarFiltro(campo: string, valor: string): void {
     setFiltros((actuales) => ({ ...actuales, [campo]: valor || undefined, page: 1 }));
@@ -74,7 +77,7 @@ export function DonacionesPage(): JSX.Element {
               />
             ))}
           </div>
-          <div className="wizard__acciones">
+          <div className="fila-acciones">
             <Button
               type="button"
               variant="secundario"

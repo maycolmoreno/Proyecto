@@ -58,11 +58,14 @@ export class PublicarDonacionUseCase {
 
     await this.donacionRepository.crear(donacion);
     // Fase 2 sección 7 — listener real desde Sprint 4: ModeracionIAService.
+    // estadoDonacion: consumido también por PublicacionIndexService (Fase 5 diferida) — campo
+    // aditivo, no afecta a listeners existentes que no lo leen.
     this.eventBus.emit('DonacionPublicada', {
       id: donacion.id,
       titulo: input.titulo,
       descripcion: input.descripcion,
       donanteId: input.donanteId,
+      estadoDonacion: donacion.estadoDonacion,
     });
     return donacion.toJSON({ incluirUbicacionExacta: true });
   }

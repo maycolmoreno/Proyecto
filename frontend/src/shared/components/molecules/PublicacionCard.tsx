@@ -11,6 +11,9 @@ interface PublicacionCardProps {
   estado: string;
   ubicacion?: string;
   urgencia?: Urgencia;
+  /** Solo usado por "Mis publicaciones" (feed unificado de los 3 tipos) — los 3 listados existentes
+   * no la pasan, así que su render no cambia. Sigue siendo puramente presentacional (ADR-045). */
+  etiquetaTipo?: string;
 }
 
 export function PublicacionCard({
@@ -20,6 +23,7 @@ export function PublicacionCard({
   estado,
   ubicacion,
   urgencia,
+  etiquetaTipo,
 }: PublicacionCardProps): JSX.Element {
   return (
     <Link to={rutaDetalle} className="publicacion-card">
@@ -34,7 +38,12 @@ export function PublicacionCard({
       </div>
       <div className="publicacion-card__cuerpo">
         <p className="publicacion-card__titulo">{titulo}</p>
-        {urgencia ? <span className={claseUrgencia(urgencia)}>{urgencia}</span> : null}
+        {urgencia || etiquetaTipo ? (
+          <div className="publicacion-card__badges">
+            {etiquetaTipo ? <span className="badge badge--tipo">{etiquetaTipo}</span> : null}
+            {urgencia ? <span className={claseUrgencia(urgencia)}>{urgencia}</span> : null}
+          </div>
+        ) : null}
         {ubicacion ? <p className="publicacion-card__ubicacion">📍 {ubicacion}</p> : null}
       </div>
     </Link>

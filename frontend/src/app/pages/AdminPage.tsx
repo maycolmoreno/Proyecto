@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { StatusBadge } from '@shared/components/atoms/StatusBadge';
 import { Button } from '@shared/components/atoms/Button';
+import { Input } from '@shared/components/atoms/Input';
 import { Select } from '@shared/components/atoms/Select';
 import { useToast } from '@shared/components/organisms/ToastProvider';
 import { useSesion } from '@features/identidad/hooks/useSesion';
@@ -11,12 +12,13 @@ import { useUsuariosAdmin } from '@features/administracion/hooks/useUsuariosAdmi
 import { useModerarUsuario } from '@features/administracion/hooks/useModerarUsuario';
 import { useModerarPublicacion } from '@features/administracion/hooks/useModerarPublicacion';
 import { useReportes } from '@features/administracion/hooks/useReportes';
+import { useCategoriasAdmin, useCrearCategoria, useActualizarCategoria } from '@features/categorias/hooks/useCategorias';
 import type { AccionModeracion, TipoEntidadModeracion, RolUsuario, EstadoUsuario } from '@features/administracion/types/index.js';
 
-type TabPrincipal = 'usuarios' | 'publicaciones' | 'reportes';
+type TabPrincipal = 'usuarios' | 'publicaciones' | 'reportes' | 'categorias';
 type TipoPublicacion = 'DONACION' | 'SOLICITUD' | 'TRUEQUE';
 
-const ROLES: RolUsuario[] = ['ADMINISTRADOR', 'DONANTE', 'BENEFICIARIO', 'USUARIO_COMUNIDAD'];
+const ROLES: RolUsuario[] = ['ADMINISTRADOR', 'USUARIO'];
 const ESTADOS_USUARIO: EstadoUsuario[] = ['ACTIVO', 'SUSPENDIDO', 'ELIMINADO'];
 
 // Fase 5, sección 2.7 — tabs Usuarios/Publicaciones/Reportes, solo ADMINISTRADOR (ADR-020, sin
@@ -45,11 +47,15 @@ export function AdminPage(): JSX.Element {
         <button type="button" role="tab" aria-selected={tab === 'reportes'} onClick={() => setTab('reportes')}>
           Reportes
         </button>
+        <button type="button" role="tab" aria-selected={tab === 'categorias'} onClick={() => setTab('categorias')}>
+          Categorías
+        </button>
       </div>
 
       {tab === 'usuarios' ? <TabUsuarios /> : null}
       {tab === 'publicaciones' ? <TabPublicaciones /> : null}
       {tab === 'reportes' ? <TabReportes /> : null}
+      {tab === 'categorias' ? <TabCategorias /> : null}
     </div>
   );
 }
@@ -217,6 +223,70 @@ function TabReportes(): JSX.Element {
           >
             Bloquear
           </Button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Solo ADMINISTRADOR (rbacMiddleware en categorias.routes.ts) — POST/PATCH /categorias.
+function TabCategorias(): JSX.Element {
+  const [nombre, setNombre] = useState('');
+  const [tipo, setTipo] = useState('');
+  const categorias = useCategoriasAdmin();
+  const crearCategoria = useCrearCategoria();
+  const actualizarCategoria = useActualizarCategoria();
+  const { mostrarToast } = useToast();
+
+  async function crear(e: FormEvent): Promise<void> {
+    e.preventDefault();
+    try {
+      await crearCategoria.mutateAsync({ nombre: nombre.trim(), tipo: tipo.trim() });
+      mostrarToast('Categoría creada.', 'exito');
+      setNombre('');
+      setTipo('');
+    } catch {
+      mostrarToast('No se pudo crear la categoría. Verifica que no exista ya.', 'error');
+    }
+  }
+
+  async function cambiarEstado(id: string, estado: 'ACTIVA' | 'INACTIVA'): Promise<void> {
+    try {
+      await actualizarCategoria.mutateAsync({ id, input: { estado } });
+      mostrarToast('Categoría actualizada.', 'exito');
+    } catch {
+      mostrarToast('No se pudo actualizar la categoría.', 'error');
+    }
+  }
+
+  return (
+    <div>
+      <form onSubmit={crear} className="filtro-panel">
+        <Input label="Nombre" name="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required maxLength={100} />
+        <Input label="Tipo" name="tipo" value={tipo} onChange={(e) => setTipo(e.target.value)} required maxLength={50} />
+        <Button type="submit" disabled={crearCategoria.isPending}>
+          Crear categoría
+        </Button>
+      </form>
+
+      {categorias.isLoading ? <p className="estado-lista">Cargando…</p> : null}
+      {categorias.data && categorias.data.length === 0 ? <p className="estado-lista">No hay categorías.</p> : null}
+
+      {(categorias.data ?? []).map((categoria) => (
+        <div key={categoria.id} className="oferta-item">
+          <p>
+            <strong>{categoria.nombre}</strong> — {categoria.tipo}
+          </p>
+          <StatusBadge estado={categoria.estado} />
+          {categoria.estado === 'ACTIVA' ? (
+            <Button variant="secundario" onClick={() => cambiarEstado(categoria.id, 'INACTIVA')} disabled={actualizarCategoria.isPending}>
+              Desactivar
+            </Button>
+          ) : (
+            <Button onClick={() => cambiarEstado(categoria.id, 'ACTIVA')} disabled={actualizarCategoria.isPending}>
+              Activar
+            </Button>
+          )}
         </div>
       ))}
     </div>

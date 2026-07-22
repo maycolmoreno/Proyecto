@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { Input } from '@shared/components/atoms/Input';
 import { Select } from '@shared/components/atoms/Select';
 import { Button } from '@shared/components/atoms/Button';
-import { PROVINCIAS_ECUADOR, type UbicacionInput } from '@shared/lib/ubicacion';
+import { geocodificarInversa, PROVINCIAS_ECUADOR, type UbicacionInput } from '@shared/lib/ubicacion';
+import { useToast } from '@shared/components/organisms/ToastProvider';
 
 // Componente reutilizable (ADR-045): provincia/ciudad/sector/referencia + geolocalización opcional
 // (IF-HW-002). Componente controlado — recibe value/onChange, no mantiene estado propio.
@@ -11,17 +13,41 @@ interface LocationPickerProps {
 }
 
 export function LocationPicker({ value, onChange }: LocationPickerProps): JSX.Element {
+  const [buscando, setBuscando] = useState(false);
+  const { mostrarToast } = useToast();
+
   function actualizar<K extends keyof UbicacionInput>(campo: K, valor: UbicacionInput[K]): void {
     onChange({ ...value, [campo]: valor });
   }
 
   function usarMiUbicacion(): void {
     if (!navigator.geolocation) return;
+    setBuscando(true);
     navigator.geolocation.getCurrentPosition(
-      (posicion) => {
-        onChange({ ...value, latitud: posicion.coords.latitude, longitud: posicion.coords.longitude });
+      async (posicion) => {
+        const { latitude, longitude } = posicion.coords;
+        try {
+          const { provincia, ciudad } = await geocodificarInversa(latitude, longitude);
+          onChange({
+            ...value,
+            latitud: latitude,
+            longitud: longitude,
+            provincia: provincia ?? value.provincia,
+            ciudad: ciudad ?? value.ciudad,
+          });
+          if (!provincia || !ciudad) {
+            mostrarToast('Ubicación detectada, pero completa provincia y/o ciudad manualmente.', 'info');
+          }
+        } catch {
+          onChange({ ...value, latitud: latitude, longitud: longitude });
+          mostrarToast('No pudimos completar provincia y ciudad automáticamente. Complétalos manualmente.', 'error');
+        } finally {
+          setBuscando(false);
+        }
       },
-      () => undefined, // permiso denegado o error — silencioso, es un campo opcional (IF-HW-002)
+      () => {
+        setBuscando(false); // permiso denegado o error — silencioso, es un campo opcional (IF-HW-002)
+      },
     );
   }
 
@@ -55,12 +81,12 @@ export function LocationPicker({ value, onChange }: LocationPickerProps): JSX.El
         value={value.referencia ?? ''}
         onChange={(e) => actualizar('referencia', e.target.value)}
       />
-      <Button type="button" variant="secundario" onClick={usarMiUbicacion}>
-        📍 Usar mi ubicación actual
+      <Button type="button" variant="secundario" onClick={usarMiUbicacion} disabled={buscando}>
+        {buscando ? 'Buscando ubicación…' : '📍 Usar mi ubicación actual'}
       </Button>
       <p className="location-picker__ayuda">
-        Esto solo agrega coordenadas GPS de referencia — provincia y ciudad siempre deben
-        completarse manualmente.
+        Detectamos provincia y ciudad automáticamente a partir de tu ubicación; revisa que sean
+        correctas antes de continuar.
       </p>
       {value.latitud && value.longitud ? <p>Coordenadas guardadas ✓</p> : null}
     </div>

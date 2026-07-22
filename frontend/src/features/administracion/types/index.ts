@@ -1,7 +1,9 @@
 // Tipos del dominio de Administración — espejo de ModeracionService (Fase 4, sección 3; RF-018/CU-011).
 export type AccionModeracion = 'APROBAR' | 'BLOQUEAR' | 'ELIMINAR';
 export type TipoEntidadModeracion = 'DONACION' | 'SOLICITUD' | 'TRUEQUE';
-export type RolUsuario = 'ADMINISTRADOR' | 'DONANTE' | 'BENEFICIARIO' | 'USUARIO_COMUNIDAD';
+// Opción D (ADR-048) — Rol quedó reducido a seguridad pura; la capacidad de marketplace vive en
+// PerfilFuncional (@features/identidad/types), no en RolUsuario.
+export type RolUsuario = 'ADMINISTRADOR' | 'USUARIO';
 export type EstadoUsuario = 'ACTIVO' | 'SUSPENDIDO' | 'ELIMINADO';
 
 export interface UsuarioAdmin {

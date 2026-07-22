@@ -1,13 +1,15 @@
 import { Router } from 'express';
 import { truequesController, container } from '../di-container.js';
 import { crearAuthMiddleware, crearAuthOpcionalMiddleware } from '../middlewares/auth.middleware.js';
-import { rbacMiddleware } from '../middlewares/rbac.middleware.js';
+import { perfilMiddleware } from '../middlewares/perfil.middleware.js';
 import { crearAuditMiddleware, idDesdeParametro, idDesdeRespuesta } from '../middlewares/audit.middleware.js';
 
 const router = Router();
 const authMiddleware = crearAuthMiddleware(container.tokenService);
 const authOpcionalMiddleware = crearAuthOpcionalMiddleware(container.tokenService);
-const donanteOComunidad = rbacMiddleware(['DONANTE', 'USUARIO_COMUNIDAD']);
+// Opción D, Fase 2 (docs/DISENO_MODELO_PERFILES.md) — antes rbacMiddleware(['DONANTE','USUARIO_COMUNIDAD']).
+// COMUNIDAD removido del perfil (ADR-049).
+const soloTrueque = perfilMiddleware(['TRUEQUE']);
 
 const auditarCreacion = crearAuditMiddleware(container.auditoriaRepository, 'CREAR', 'TRUEQUE', idDesdeRespuesta);
 const auditarCancelacion = crearAuditMiddleware(
@@ -26,14 +28,14 @@ const auditarAprobarPropuesta = crearAuditMiddleware(
 );
 
 // Fase 4, sección 3 (BC-Trueques).
-router.post('/trueques', authMiddleware, donanteOComunidad, auditarCreacion, truequesController.crear);
+router.post('/trueques', authMiddleware, soloTrueque, auditarCreacion, truequesController.crear);
 router.get('/trueques', authOpcionalMiddleware, truequesController.listar);
 router.get('/trueques/:id', authOpcionalMiddleware, truequesController.obtener);
 router.patch('/trueques/:id', authMiddleware, auditarCancelacion, truequesController.actualizar);
 router.post(
   '/trueques/:id/propuestas',
   authMiddleware,
-  donanteOComunidad,
+  soloTrueque,
   truequesController.proponerHandler,
 );
 router.patch(

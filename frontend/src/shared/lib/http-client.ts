@@ -49,7 +49,16 @@ async function fetchApi(path: string, init: RequestInit = {}): Promise<Response>
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  const response = await fetch(`${API_URL}${path}`, { ...init, headers });
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, { ...init, headers });
+  } catch {
+    // fetch() rechaza (sin llegar a haber respuesta HTTP) cuando el servidor está caído, hay un
+    // problema de CORS/DNS, o el usuario está sin conexión. El mensaje nativo del navegador
+    // ("NetworkError when attempting to fetch resource", "Failed to fetch") no es entendible para
+    // un usuario final — se normaliza al mismo ApiError que ya maneja el resto de la app.
+    throw new ApiError(0, 'NETWORK_ERROR', 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.');
+  }
 
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as ApiErrorBody | null;
@@ -63,6 +72,17 @@ async function fetchApi(path: string, init: RequestInit = {}): Promise<Response>
   return response;
 }
 
+// Respuesta 200/201 con cuerpo que no es JSON válido (proxy caído, error de gateway, etc.) es un
+// caso borde raro pero real — sin este catch, `.json()` lanza un SyntaxError críptico que también
+// se filtraría crudo a la UI, igual que el NetworkError de fetchApi.
+async function leerJson<T>(response: Response): Promise<T> {
+  try {
+    return (await response.json()) as T;
+  } catch {
+    throw new ApiError(response.status, 'RESPUESTA_INVALIDA', 'El servidor devolvió una respuesta inesperada. Inténtalo de nuevo.');
+  }
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetchApi(path, init);
 
@@ -70,7 +90,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     return undefined as T;
   }
 
-  const body = (await response.json()) as { data: T };
+  const body = await leerJson<{ data: T }>(response);
   return body.data;
 }
 
@@ -78,7 +98,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 // descarta `meta` (page/limit/total/totalPages), necesario para renderizar paginación.
 async function requestPaginado<T>(path: string): Promise<RespuestaPaginada<T>> {
   const response = await fetchApi(path, { method: 'GET' });
-  return (await response.json()) as RespuestaPaginada<T>;
+  return leerJson<RespuestaPaginada<T>>(response);
 }
 
 export const httpClient = {

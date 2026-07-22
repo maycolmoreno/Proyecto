@@ -61,6 +61,11 @@ export class CrearOfertaUseCase {
       throw new NoEsDueñoDeLaDonacionOfrecidaError();
     }
 
+    // Lanza DonacionNoDisponibleError si la donación ya fue comprometida en otra oferta aceptada
+    // (o está entregada/cancelada) — antes de mutar la Solicitud, para no dejarla en
+    // ACEPTADA_POR_DONANTE si la donación en realidad no está disponible.
+    donacion.comprometer();
+
     solicitud.agregarOfertaAceptada({
       id: randomUUID(),
       donanteId,
@@ -69,6 +74,7 @@ export class CrearOfertaUseCase {
     });
 
     await this.solicitudRepository.actualizar(solicitud);
+    await this.donacionRepository.actualizar(donacion);
 
     // Un solo paso (Fase 4): la oferta ya nace ACEPTADA, por eso ambos eventos se emiten juntos aquí.
     // El destinatario de la notificación es el beneficiario (dueño de la solicitud), no el donante.

@@ -34,7 +34,7 @@ const SYSTEM_PROMPT_MODERACION =
  * Sprint 5 por acceso a API key gratuita (decisión documentada en fase-07-inteligencia-artificial.md
  * historial — desvía de ADR-024, que eligió Claude/Anthropic). Modelos diferenciados por tarea, mismo
  * criterio que ClaudeAdapter: chatbot → `gemini-3.5-flash` (mejor calidad conversacional dentro del
- * tier Flash), resto → `gemini-2.5-flash-lite` (más barato/rápido, tareas acotadas de alto volumen). */
+ * tier Flash), resto → `gemini-3.5-flash-lite` (más barato/rápido, tareas acotadas de alto volumen). */
 export class GeminiAdapter implements IIAProvider {
   private readonly client: GoogleGenAI | null;
 
@@ -82,7 +82,7 @@ export class GeminiAdapter implements IIAProvider {
     }
 
     const response = await client.models.generateContent({
-      model: 'gemini-2.5-flash-lite',
+      model: 'gemini-3.5-flash-lite',
       contents: [
         {
           role: 'user',
@@ -113,7 +113,7 @@ export class GeminiAdapter implements IIAProvider {
   async matchScore(origen: MatchCandidato, candidato: MatchCandidato): Promise<MatchResultado> {
     const client = this.requerirCliente();
     const response = await client.models.generateContent({
-      model: 'gemini-2.5-flash-lite',
+      model: 'gemini-3.5-flash-lite',
       contents: [
         {
           role: 'user',
@@ -143,7 +143,7 @@ export class GeminiAdapter implements IIAProvider {
   async evaluarRiesgo(titulo: string, descripcion: string): Promise<EvaluarRiesgoResultado> {
     const client = this.requerirCliente();
     const response = await client.models.generateContent({
-      model: 'gemini-2.5-flash-lite',
+      model: 'gemini-3.5-flash-lite',
       contents: [{ role: 'user', parts: [{ text: `Título: ${titulo}\nDescripción: ${descripcion}` }] }],
       config: {
         systemInstruction: SYSTEM_PROMPT_MODERACION,

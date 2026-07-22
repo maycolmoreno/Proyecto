@@ -46,11 +46,14 @@ export class PublicarTruequeUseCase {
 
     await this.truequeRepository.crear(trueque);
     // Fase 7 sección 5 — listener real desde Sprint 4: ModeracionIAService.
+    // estadoTrueque: consumido también por PublicacionIndexService (Fase 5 diferida) — campo
+    // aditivo, no afecta a listeners existentes que no lo leen.
     this.eventBus.emit('TruequePublicado', {
       id: trueque.id,
       titulo: input.titulo,
       descripcion: input.descripcion,
       usuarioId: input.usuarioId,
+      estadoTrueque: trueque.estadoTrueque,
     });
     return trueque.toJSON({ solicitanteId: input.usuarioId });
   }

@@ -1,4 +1,5 @@
 import type { IUsuarioRepository } from '@domain/identidad/ports/IUsuarioRepository.js';
+import type { IUsuarioPerfilRepository } from '@domain/identidad/ports/IUsuarioPerfilRepository.js';
 import type { IPasswordHasher } from '@domain/identidad/ports/IPasswordHasher.js';
 import type { ITokenService } from '@domain/identidad/ports/ITokenService.js';
 import type { UsuarioPublico } from '@domain/identidad/entities/Usuario.js';
@@ -35,6 +36,7 @@ export class IniciarSesionUseCase {
     private readonly passwordHasher: IPasswordHasher,
     private readonly tokenService: ITokenService,
     private readonly auditoriaRepository: IAuditoriaRepository,
+    private readonly usuarioPerfilRepository: IUsuarioPerfilRepository,
   ) {}
 
   async ejecutar(input: IniciarSesionInput): Promise<IniciarSesionResult> {
@@ -59,7 +61,8 @@ export class IniciarSesionUseCase {
       throw new UsuarioInactivoError();
     }
 
-    const token = this.tokenService.generar({ sub: usuario.id, rol: usuario.rol });
+    const perfiles = await this.usuarioPerfilRepository.listarPerfiles(usuario.id);
+    const token = this.tokenService.generar({ sub: usuario.id, rol: usuario.rol, perfiles });
 
     return { token, usuario: usuario.toJSON() };
   }

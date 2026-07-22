@@ -13,6 +13,10 @@
 ## Otros documentos
 - [`DECISIONES.md`](DECISIONES.md) — log de decisiones de arquitectura (ADR-lite), incluye correcciones a inconsistencias del SRS.
 - [`PLAN_IMPLEMENTACION.md`](PLAN_IMPLEMENTACION.md) — tracker vivo de ejecución del backend (Sprint 2 en adelante), desglosado capa por capa para no saltarse pasos. Distinto de `fases/` (que es diseño ya congelado): este se actualiza con checkboxes a medida que se construye.
+- [`PLAN_FRONTEND.md`](PLAN_FRONTEND.md) — tracker vivo de ejecución del frontend (Sprints F0-F5), mismo criterio que `PLAN_IMPLEMENTACION.md`.
+- **Extensión post-MVP — Modelo de Perfiles Funcionales (Opción D, ADR-048):** [`AUDITORIA_FUNCIONAL_MARKETPLACE.md`](AUDITORIA_FUNCIONAL_MARKETPLACE.md) (auditoría de solo lectura, 2026-07-10 — **desactualizada**, describe el modelo de roles previo a ADR-048/049, ver nota abajo) → [`DISENO_MODELO_PERFILES.md`](DISENO_MODELO_PERFILES.md) (propuesta de 4 opciones, Opción D aprobada) → [`PLAN_PERFILES.md`](PLAN_PERFILES.md) (tracker vivo de ejecución, Fases 1-4 cerradas 2026-07-14/15).
+- **Manual de defensa:** [`MANUAL_DEFENSA_PROYECTO.md`](MANUAL_DEFENSA_PROYECTO.md) (2026-07-16 — parcialmente desactualizado en el detalle de `PerfilFuncional`, ver `02_TRAZABILIDAD_SRS_CODIGO.md`).
+- **Auditoría técnica para defensa (2026-07-18, COMPLETA — 22 de 22 documentos + índice):** ver [`README_TECNICO.md`](README_TECNICO.md), el índice dedicado de toda la serie (`00` a `21`, con guía de "por dónde empezar" según el propósito: estudiar para la defensa, entender la arquitectura, o corregir hallazgos antes de la entrega). Cada afirmación cita archivo:línea; verificado contra el código en disco (incluye cambios sin commitear), no solo contra documentación previa — de hecho, `MANUAL_DEFENSA_PROYECTO.md` y `AUDITORIA_FUNCIONAL_MARKETPLACE.md` resultaron ambos parcialmente desactualizados frente al código real, ver `18_INFORME_TECNICO.md §28`.
 
 ## Estado de las fases
 

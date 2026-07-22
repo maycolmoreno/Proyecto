@@ -59,6 +59,13 @@ export class DonacionYaFinalizadaError extends Error {
   }
 }
 
+export class DonacionNoDisponibleError extends Error {
+  constructor() {
+    super('La donación ya fue comprometida en otra oferta, entregada o cancelada.');
+    this.name = 'DonacionNoDisponibleError';
+  }
+}
+
 /** Aggregate Root — Fase 2 (BC-Donaciones). Sin dependencias de framework (Clean Architecture, capa Entities). */
 export class Donacion {
   private constructor(private props: DonacionProps) {}
@@ -148,6 +155,22 @@ export class Donacion {
   cancelar(): void {
     if (this.estaFinalizada()) throw new DonacionYaFinalizadaError();
     this.props.estadoDonacion = 'CANCELADA';
+  }
+
+  /** RF-009/CU-006 — se invoca al aceptar una oferta sobre esta donación (Sprint 2, un solo paso).
+   * Sin esta transición, la donación seguía en PUBLICADA y podía comprometerse en más de una
+   * solicitud a la vez (dos ofertas ACEPTADA distintas apuntando a la misma donación). */
+  comprometer(): void {
+    if (this.props.estadoDonacion !== 'PUBLICADA') throw new DonacionNoDisponibleError();
+    this.props.estadoDonacion = 'SOLICITADA';
+  }
+
+  /** Revierte el compromiso cuando la oferta que la había comprometido es rechazada — mismo
+   * criterio que `Trueque.revertirDeCoordinacion()`: no-op si no está en el estado esperado. */
+  liberar(): void {
+    if (this.props.estadoDonacion === 'SOLICITADA') {
+      this.props.estadoDonacion = 'PUBLICADA';
+    }
   }
 
   /** Sprint 5 — cierra el gap detectado en Sprints 2-3 (ver fase-06-backend.md historial):

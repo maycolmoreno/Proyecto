@@ -7,14 +7,17 @@ import { TextArea } from '@shared/components/atoms/TextArea';
 import { useToast } from '@shared/components/organisms/ToastProvider';
 import { claseUrgencia } from '@shared/lib/estado-color';
 import { useSesion } from '@features/identidad/hooks/useSesion';
-import { useDonaciones } from '@features/donaciones/hooks/useDonaciones';
 import { useSolicitud } from '@features/solicitudes/hooks/useSolicitud';
+import { useMisDonacionesDisponibles } from '@features/solicitudes/hooks/useMisDonacionesDisponibles';
 import { useCrearOferta } from '@features/solicitudes/hooks/useCrearOferta';
 import { useRechazarOferta } from '@features/solicitudes/hooks/useRechazarOferta';
 import { CoordinacionEntrega } from '@features/entregas/components/CoordinacionEntrega';
 import { MatchesSugeridos } from '@features/ia/components/MatchesSugeridos';
+import type { PerfilFuncional } from '@features/identidad/types/index.js';
 
-const ROLES_PUEDEN_OFERTAR = ['DONANTE', 'USUARIO_COMUNIDAD'];
+// Opción D, Fase 3 (docs/DISENO_MODELO_PERFILES.md) — antes ROLES_PUEDEN_OFERTAR con rol.
+// COMUNIDAD removido (ADR-049).
+const PERFILES_PUEDEN_OFERTAR: PerfilFuncional[] = ['DONANTE'];
 
 export function SolicitudDetallePage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
@@ -27,11 +30,7 @@ export function SolicitudDetallePage(): JSX.Element {
   const { mostrarToast } = useToast();
 
   // Mis donaciones publicadas de la misma categoría — candidatas para ofrecer (Fase 5 sección 2.5).
-  const misDonaciones = useDonaciones({
-    categoriaId: solicitud.data?.categoria.id,
-    estado: 'PUBLICADA',
-    limit: 50,
-  });
+  const misDonaciones = useMisDonacionesDisponibles(solicitud.data?.categoria.id);
 
   if (solicitud.isLoading) return <p className="estado-lista">Cargando…</p>;
   if (solicitud.isError || !solicitud.data) return <p className="estado-lista">No se encontró esta solicitud.</p>;
@@ -40,9 +39,9 @@ export function SolicitudDetallePage(): JSX.Element {
   const puedeOfertar =
     sesion.data &&
     !esDueño &&
-    ROLES_PUEDEN_OFERTAR.includes(sesion.data.rol) &&
+    PERFILES_PUEDEN_OFERTAR.some((p) => sesion.data.perfiles.includes(p)) &&
     solicitud.data.estadoSolicitud === 'ABIERTA';
-  const misDonacionesDisponibles = (misDonaciones.data?.data ?? []).filter((d) => d.donanteId === sesion.data?.id);
+  const misDonacionesDisponibles = misDonaciones.data;
   const ofertaAceptada = solicitud.data.ofertas.find((o) => o.estado === 'ACEPTADA');
 
   async function ofrecer(): Promise<void> {
@@ -64,7 +63,7 @@ export function SolicitudDetallePage(): JSX.Element {
   }
 
   return (
-    <div>
+    <div className="detalle-pagina">
       <StatusBadge estado={solicitud.data.estadoSolicitud} />{' '}
       <span className={claseUrgencia(solicitud.data.urgencia)}>{solicitud.data.urgencia}</span>
       <h1>{solicitud.data.titulo}</h1>

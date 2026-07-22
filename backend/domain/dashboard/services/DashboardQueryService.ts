@@ -1,14 +1,14 @@
 import type { IDonacionRepository } from '@domain/donaciones/ports/IDonacionRepository.js';
 import type { ISolicitudRepository } from '@domain/solicitudes/ports/ISolicitudRepository.js';
 import type { ITruequeRepository } from '@domain/trueques/ports/ITruequeRepository.js';
-import type { IUsuarioRepository } from '@domain/identidad/ports/IUsuarioRepository.js';
+import type { IUsuarioPerfilRepository } from '@domain/identidad/ports/IUsuarioPerfilRepository.js';
 import type { IEventoSistemaRepository } from '@domain/notificaciones/ports/IEventoSistemaRepository.js';
 
 export interface DashboardImpacto {
   donaciones: { publicadas: number; entregadas: number };
   solicitudes: { abiertas: number; atendidas: number };
   trueques: { publicados: number; intercambiados: number };
-  usuarios: { donantes: number; beneficiarios: number; usuariosComunidad: number };
+  usuarios: { donantes: number; beneficiarios: number };
   eventosClave: { solicitudAtendida: number; truequeIntercambiado: number; entregaConfirmada: number };
 }
 
@@ -25,7 +25,7 @@ export class DashboardQueryService {
     private readonly donacionRepository: IDonacionRepository,
     private readonly solicitudRepository: ISolicitudRepository,
     private readonly truequeRepository: ITruequeRepository,
-    private readonly usuarioRepository: IUsuarioRepository,
+    private readonly usuarioPerfilRepository: IUsuarioPerfilRepository,
     private readonly eventoSistemaRepository: IEventoSistemaRepository,
   ) {}
 
@@ -39,7 +39,6 @@ export class DashboardQueryService {
       truequesIntercambiados,
       donantes,
       beneficiarios,
-      usuariosComunidad,
       eventosClave,
     ] = await Promise.all([
       this.donacionRepository.listar({ estado: 'PUBLICADA' }, SIN_PAGINACION),
@@ -48,9 +47,11 @@ export class DashboardQueryService {
       this.solicitudRepository.listar({ estado: 'ATENDIDA' }, SIN_PAGINACION),
       this.truequeRepository.listar({ estado: 'PUBLICADO' }, SIN_PAGINACION),
       this.truequeRepository.listar({ estado: 'INTERCAMBIADO' }, SIN_PAGINACION),
-      this.usuarioRepository.listarPorRol('DONANTE'),
-      this.usuarioRepository.listarPorRol('BENEFICIARIO'),
-      this.usuarioRepository.listarPorRol('USUARIO_COMUNIDAD'),
+      this.usuarioPerfilRepository.contarUsuarios('DONANTE'),
+      // "beneficiarios" es nombre histórico del DTO (Fase 4) — ahora cuenta perfil SOLICITANTE
+      // (Opción D, docs/DISENO_MODELO_PERFILES.md), no se renombra el campo para no romper el
+      // contrato de /dashboard/impacto ya consumido por el frontend (Sprint F5).
+      this.usuarioPerfilRepository.contarUsuarios('SOLICITANTE'),
       this.eventoSistemaRepository.contarPorTipoEvento(['SolicitudAtendida', 'TruequeIntercambiado', 'EntregaConfirmada']),
     ]);
 
@@ -60,7 +61,7 @@ export class DashboardQueryService {
       donaciones: { publicadas: donacionesPublicadas.total, entregadas: donacionesEntregadas.total },
       solicitudes: { abiertas: solicitudesAbiertas.total, atendidas: solicitudesAtendidas.total },
       trueques: { publicados: truequesPublicados.total, intercambiados: truequesIntercambiados.total },
-      usuarios: { donantes: donantes.length, beneficiarios: beneficiarios.length, usuariosComunidad: usuariosComunidad.length },
+      usuarios: { donantes, beneficiarios },
       eventosClave: {
         solicitudAtendida: totalPorTipo('SolicitudAtendida'),
         truequeIntercambiado: totalPorTipo('TruequeIntercambiado'),

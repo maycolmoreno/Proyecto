@@ -3,12 +3,16 @@ import { prisma } from './prisma-client.js';
 import { env } from './env.js';
 import { eventBus } from './event-bus.js';
 import { PrismaUsuarioRepository } from '@adapters/identidad/repositories/PrismaUsuarioRepository.js';
+import { PrismaUsuarioPerfilRepository } from '@adapters/identidad/repositories/PrismaUsuarioPerfilRepository.js';
 import { BcryptPasswordHasher } from '@adapters/identidad/security/BcryptPasswordHasher.js';
 import { JwtTokenService } from '@adapters/identidad/security/JwtTokenService.js';
 import { RegistrarUsuarioUseCase } from '@application/identidad/use-cases/RegistrarUsuarioUseCase.js';
 import { IniciarSesionUseCase } from '@application/identidad/use-cases/IniciarSesionUseCase.js';
 import { ObtenerPerfilUseCase } from '@application/identidad/use-cases/ObtenerPerfilUseCase.js';
 import { ObtenerUsuarioPublicoUseCase } from '@application/identidad/use-cases/ObtenerUsuarioPublicoUseCase.js';
+import { AsignarPerfilesUseCase } from '@application/identidad/use-cases/AsignarPerfilesUseCase.js';
+import { ActualizarUbicacionPerfilUseCase } from '@application/identidad/use-cases/ActualizarUbicacionPerfilUseCase.js';
+import { PrismaUbicacionPerfilRepository } from '@adapters/identidad/repositories/PrismaUbicacionPerfilRepository.js';
 import { AuthController } from '@adapters/identidad/controllers/auth.controller.js';
 import { UsuariosController } from '@adapters/identidad/controllers/usuarios.controller.js';
 
@@ -100,6 +104,11 @@ import { DashboardQueryService } from '@domain/dashboard/services/DashboardQuery
 import { ObtenerDashboardImpactoUseCase } from '@application/dashboard/use-cases/ObtenerDashboardImpactoUseCase.js';
 import { DashboardController } from '@adapters/dashboard/controllers/dashboard.controller.js';
 
+import { MongoosePublicacionIndexRepository } from '@adapters/publicaciones/repositories/MongoosePublicacionIndexRepository.js';
+import { PublicacionIndexService } from '@domain/publicaciones/services/PublicacionIndexService.js';
+import { ListarMisPublicacionesUseCase } from '@application/publicaciones/use-cases/ListarMisPublicacionesUseCase.js';
+import { PublicacionesController } from '@adapters/publicaciones/controllers/publicaciones.controller.js';
+
 // Composition root (Clean Architecture, capa Frameworks & Drivers) — único lugar
 // que decide qué adaptador concreto se inyecta en cada caso de uso (ADR-042/044).
 
@@ -108,21 +117,42 @@ const auditoriaRepository = new PrismaAuditoriaRepository(prisma);
 
 // BC-Identidad
 const usuarioRepository = new PrismaUsuarioRepository(prisma);
+// Opción D (docs/DISENO_MODELO_PERFILES.md) — usuarios_perfiles, independiente de rol.
+const usuarioPerfilRepository = new PrismaUsuarioPerfilRepository(prisma);
+// Ubicación de perfil (tipo PERFIL) — cierra el gap de PerfilPage.tsx tab "Ubicación".
+const ubicacionPerfilRepository = new PrismaUbicacionPerfilRepository(prisma);
 const passwordHasher = new BcryptPasswordHasher();
 const tokenService = new JwtTokenService(env.JWT_SECRET);
 
-const registrarUsuarioUseCase = new RegistrarUsuarioUseCase(usuarioRepository, passwordHasher, eventBus);
+const registrarUsuarioUseCase = new RegistrarUsuarioUseCase(
+  usuarioRepository,
+  passwordHasher,
+  eventBus,
+  usuarioPerfilRepository,
+);
 const iniciarSesionUseCase = new IniciarSesionUseCase(
   usuarioRepository,
   passwordHasher,
   tokenService,
   auditoriaRepository,
+  usuarioPerfilRepository,
 );
-const obtenerPerfilUseCase = new ObtenerPerfilUseCase(usuarioRepository);
+const obtenerPerfilUseCase = new ObtenerPerfilUseCase(
+  usuarioRepository,
+  usuarioPerfilRepository,
+  ubicacionPerfilRepository,
+);
 const obtenerUsuarioPublicoUseCase = new ObtenerUsuarioPublicoUseCase(usuarioRepository);
+const asignarPerfilesUseCase = new AsignarPerfilesUseCase(usuarioPerfilRepository);
+const actualizarUbicacionPerfilUseCase = new ActualizarUbicacionPerfilUseCase(ubicacionPerfilRepository);
 
 export const authController = new AuthController(registrarUsuarioUseCase, iniciarSesionUseCase);
-export const usuariosController = new UsuariosController(obtenerPerfilUseCase, obtenerUsuarioPublicoUseCase);
+export const usuariosController = new UsuariosController(
+  obtenerPerfilUseCase,
+  obtenerUsuarioPublicoUseCase,
+  asignarPerfilesUseCase,
+  actualizarUbicacionPerfilUseCase,
+);
 
 // BC-Categorías (Shared Kernel)
 const categoriaRepository = new PrismaCategoriaRepository(prisma);
@@ -368,11 +398,35 @@ const dashboardQueryService = new DashboardQueryService(
   donacionRepository,
   solicitudRepository,
   truequeRepository,
-  usuarioRepository,
+  usuarioPerfilRepository,
   eventoSistemaRepository,
 );
 const obtenerDashboardImpactoUseCase = new ObtenerDashboardImpactoUseCase(dashboardQueryService);
 export const dashboardController = new DashboardController(obtenerDashboardImpactoUseCase);
+
+// BC-Publicaciones (Fase 5 diferida, docs/DISENO_MODELO_PERFILES.md sección 7). Tercer listener
+// real del Event Bus — proyección de solo lectura "Mis publicaciones", coexiste con los listeners
+// de ModeracionIAService/NotificacionDispatchService sobre los mismos 3 eventos de creación.
+const publicacionIndexRepository = new MongoosePublicacionIndexRepository();
+const publicacionIndexService = new PublicacionIndexService(publicacionIndexRepository);
+const listarMisPublicacionesUseCase = new ListarMisPublicacionesUseCase(publicacionIndexRepository);
+export const publicacionesController = new PublicacionesController(listarMisPublicacionesUseCase);
+
+eventBus.on<{ id: string; titulo: string; donanteId: string; estadoDonacion: string }>('DonacionPublicada', (p) =>
+  publicacionIndexService.alDonacionPublicada(p),
+);
+eventBus.on<{ id: string; titulo: string; beneficiarioId: string; estadoSolicitud: string }>('SolicitudCreada', (p) =>
+  publicacionIndexService.alSolicitudCreada(p),
+);
+eventBus.on<{ id: string; titulo: string; usuarioId: string; estadoTrueque: string }>('TruequePublicado', (p) =>
+  publicacionIndexService.alTruequePublicado(p),
+);
+eventBus.on<{ id: string }>('SolicitudAceptadaPorDonante', (p) => publicacionIndexService.alSolicitudAceptadaPorDonante(p));
+eventBus.on<{ id: string }>('SolicitudAtendida', (p) => publicacionIndexService.alSolicitudAtendida(p));
+eventBus.on<{ truequeOrigenId: string; truequeOfrecidoId: string }>('TruequeAceptadoBilateralmente', (p) =>
+  publicacionIndexService.alTruequeAceptadoBilateralmente(p),
+);
+eventBus.on<{ id: string }>('TruequeIntercambiado', (p) => publicacionIndexService.alTruequeIntercambiado(p));
 
 eventBus.on<{ id: string; nombre: string }>('UsuarioRegistrado', (p) => notificacionDispatchService.alUsuarioRegistrado(p));
 eventBus.on<{ id: string; titulo: string; donanteId: string }>('DonacionPublicada', (p) =>

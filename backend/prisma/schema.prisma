@@ -5,6 +5,8 @@
 // Retrofit (RNF-006, Fase 9 sección 3): auditoria — pendiente desde Sprint 0, cerrado antes de Sprint 2.
 // Sprint 2: solicitudes + ofertas_solicitud + entregas (BC-Solicitudes, BC-Entregas, Fase 2).
 // Sprint 3: trueques + propuestas_trueque (BC-Trueques, Fase 2).
+// Extensión post-MVP (docs/DISENO_MODELO_PERFILES.md, Opción D, Fase 1): usuarios_perfiles —
+// aditiva, no toca columnas existentes de usuarios. rol sigue con sus 4 valores hasta la Fase 2.
 
 generator client {
   provider = "prisma-client-js"
@@ -15,11 +17,11 @@ datasource db {
   url      = env("DB_POSTGRES_URL")
 }
 
+/** Opción D, Fase 2 (docs/DISENO_MODELO_PERFILES.md) — reducido de 4 a 2 valores: seguridad pura.
+ * La capacidad de marketplace (antes DONANTE/BENEFICIARIO/USUARIO_COMUNIDAD) vive en PerfilFuncional. */
 enum Rol {
   ADMINISTRADOR
-  DONANTE
-  BENEFICIARIO
-  USUARIO_COMUNIDAD
+  USUARIO
 
   @@map("rol")
 }
@@ -35,8 +37,22 @@ enum EstadoUsuario {
 enum TipoUbicacion {
   ESTABLECIDA
   RETIRO
+  /// Ubicación de perfil, editable desde /perfil — distinta de ESTABLECIDA (que ya usa cada
+  /// Solicitud para su propia ubicación puntual, ver PrismaUbicacionSolicitudRepository).
+  PERFIL
 
   @@map("tipo_ubicacion")
+}
+
+/** Opción D (docs/DISENO_MODELO_PERFILES.md sección 6) — capacidad de marketplace, independiente
+ * del rol de seguridad (Rol). Un usuario puede tener 0, 1 o los 3 a la vez.
+ * COMUNIDAD removido (ADR-049) — ver docs/DISENO_MODELO_PERFILES.md sección 7 (Fase 5, `Organizacion`). */
+enum PerfilFuncional {
+  DONANTE
+  SOLICITANTE
+  TRUEQUE
+
+  @@map("perfil_funcional")
 }
 
 model Usuario {
@@ -56,9 +72,22 @@ model Usuario {
   ofertasComoDonante      OfertaSolicitud[]
   trueques                Trueque[]
   propuestasComoProponente PropuestaTrueque[]
+  perfiles                UsuarioPerfil[]
 
   @@index([rol])
   @@map("usuarios")
+}
+
+/** Opción D, Fase 1 — tabla aditiva, mismo patrón relacional que Ubicacion (1-a-muchos sobre Usuario). */
+model UsuarioPerfil {
+  id        String          @id @default(uuid()) @map("id_usuario_perfil") @db.Uuid
+  usuarioId String          @map("id_usuario") @db.Uuid
+  usuario   Usuario         @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  perfil    PerfilFuncional
+  fecha     DateTime        @default(now()) @db.Timestamptz
+
+  @@unique([usuarioId, perfil])
+  @@map("usuarios_perfiles")
 }
 
 model Ubicacion {

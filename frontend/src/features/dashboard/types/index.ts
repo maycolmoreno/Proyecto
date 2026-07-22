@@ -3,6 +3,6 @@ export interface DashboardImpacto {
   donaciones: { publicadas: number; entregadas: number };
   solicitudes: { abiertas: number; atendidas: number };
   trueques: { publicados: number; intercambiados: number };
-  usuarios: { donantes: number; beneficiarios: number; usuariosComunidad: number };
+  usuarios: { donantes: number; beneficiarios: number };
   eventosClave: { solicitudAtendida: number; truequeIntercambiado: number; entregaConfirmada: number };
 }

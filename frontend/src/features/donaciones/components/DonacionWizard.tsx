@@ -5,11 +5,12 @@ import { Input } from '@shared/components/atoms/Input';
 import { TextArea } from '@shared/components/atoms/TextArea';
 import { Select } from '@shared/components/atoms/Select';
 import { Button } from '@shared/components/atoms/Button';
-import { LocationPicker } from '@shared/components/molecules/LocationPicker';
+import { SelectorUbicacion } from '@shared/components/molecules/SelectorUbicacion';
 import { IASuggestionBox } from '@shared/components/molecules/IASuggestionBox';
 import { subirACloudinary } from '@shared/lib/cloudinary';
 import { useToast } from '@shared/components/organisms/ToastProvider';
 import type { UbicacionInput } from '@shared/lib/ubicacion';
+import { useSesion } from '@features/identidad/hooks/useSesion';
 import { useCategorias } from '@features/categorias/hooks/useCategorias';
 import { useClasificar } from '@features/ia/hooks/useClasificar';
 import { useCrearDonacion } from '../hooks/useCrearDonacion.js';
@@ -49,6 +50,7 @@ export function DonacionWizard(): JSX.Element {
   } | null>(null);
   const [sugerenciaAplicada, setSugerenciaAplicada] = useState(false);
 
+  const sesion = useSesion();
   const categorias = useCategorias();
   const crearDonacion = useCrearDonacion();
   const clasificar = useClasificar();
@@ -192,7 +194,13 @@ export function DonacionWizard(): JSX.Element {
             <input type="checkbox" checked={requiereRetiro} onChange={(e) => setRequiereRetiro(e.target.checked)} />
             {' '}Requiere que lo retiren en mi ubicación
           </label>
-          {requiereRetiro ? <LocationPicker value={ubicacionRetiro} onChange={setUbicacionRetiro} /> : null}
+          {requiereRetiro ? (
+            <SelectorUbicacion
+              value={ubicacionRetiro}
+              onChange={setUbicacionRetiro}
+              ubicacionRegistrada={sesion.data?.ubicacion ?? null}
+            />
+          ) : null}
         </>
       ) : null}
 

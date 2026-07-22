@@ -2,29 +2,39 @@ import { useState, type FormEvent } from 'react';
 import { Input } from '@shared/components/atoms/Input';
 import { Button } from '@shared/components/atoms/Button';
 import { useRegistro } from '../hooks/useRegistro.js';
-import type { Rol } from '../types/index.js';
+import type { PerfilFuncional } from '../types/index.js';
 
 interface RegistroFormProps {
   onExito: () => void;
 }
 
-const ROLES: { valor: Rol; etiqueta: string }[] = [
-  { valor: 'USUARIO_COMUNIDAD', etiqueta: 'Usuario Comunidad (dona, solicita e intercambia)' },
-  { valor: 'DONANTE', etiqueta: 'Donante' },
-  { valor: 'BENEFICIARIO', etiqueta: 'Beneficiario' },
+// Opción D, Fase 3 (docs/DISENO_MODELO_PERFILES.md) — selección múltiple, reemplaza el único
+// <select> de rol: un usuario puede activar cualquier combinación de perfiles desde el registro.
+// COMUNIDAD removido (ADR-049) — separado hasta que se priorice como agregado `Organizacion`.
+const PERFILES: { valor: PerfilFuncional; etiqueta: string }[] = [
+  { valor: 'DONANTE', etiqueta: 'Donante — quiero donar objetos' },
+  { valor: 'SOLICITANTE', etiqueta: 'Solicitante — necesito pedir ayuda' },
+  { valor: 'TRUEQUE', etiqueta: 'Trueque — quiero intercambiar objetos' },
 ];
 
 export function RegistroForm({ onExito }: RegistroFormProps): JSX.Element {
   const [nombre, setNombre] = useState('');
   const [correo, setCorreo] = useState('');
   const [password, setPassword] = useState('');
-  const [rol, setRol] = useState<Rol>('USUARIO_COMUNIDAD');
+  const [perfiles, setPerfiles] = useState<PerfilFuncional[]>(['DONANTE']);
   const registro = useRegistro();
+
+  function alternarPerfil(perfil: PerfilFuncional): void {
+    setPerfiles((actuales) =>
+      actuales.includes(perfil) ? actuales.filter((p) => p !== perfil) : [...actuales, perfil],
+    );
+  }
 
   function manejarEnvio(evento: FormEvent): void {
     evento.preventDefault();
+    if (perfiles.length === 0) return;
     registro.mutate(
-      { nombre, correo, password, rol, aceptaTerminos: true },
+      { nombre, correo, password, perfiles, aceptaTerminos: true },
       { onSuccess: onExito },
     );
   }
@@ -49,22 +59,30 @@ export function RegistroForm({ onExito }: RegistroFormProps): JSX.Element {
         onChange={(e) => setPassword(e.target.value)}
         required
       />
-      <div className="form-field">
-        <label htmlFor="rol">Rol</label>
-        <select id="rol" value={rol} onChange={(e) => setRol(e.target.value as Rol)}>
-          {ROLES.map((opcion) => (
-            <option key={opcion.valor} value={opcion.valor}>
-              {opcion.etiqueta}
-            </option>
-          ))}
-        </select>
-      </div>
+      <fieldset className="form-field form-field--opciones">
+        <legend>¿Qué quieres hacer en DonaConnect? (elige al menos una)</legend>
+        {PERFILES.map((opcion) => (
+          <label key={opcion.valor} className="opcion-checkbox">
+            <input
+              type="checkbox"
+              checked={perfiles.includes(opcion.valor)}
+              onChange={() => alternarPerfil(opcion.valor)}
+            />
+            {opcion.etiqueta}
+          </label>
+        ))}
+      </fieldset>
+      {perfiles.length === 0 ? (
+        <p role="alert" className="form-field__error">
+          Elige al menos un perfil.
+        </p>
+      ) : null}
       {registro.isError ? (
         <p role="alert" className="form-field__error">
           {registro.error.message}
         </p>
       ) : null}
-      <Button type="submit" disabled={registro.isPending}>
+      <Button type="submit" disabled={registro.isPending || perfiles.length === 0}>
         {registro.isPending ? 'Registrando…' : 'Crear cuenta'}
       </Button>
     </form>

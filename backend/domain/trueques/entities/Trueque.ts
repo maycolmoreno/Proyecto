@@ -93,6 +93,13 @@ export class PropuestaYaAceptadaError extends Error {
   }
 }
 
+export class TruequeYaComprometidoError extends Error {
+  constructor() {
+    super('El trueque ofrecido ya fue comprometido en otra negociación.');
+    this.name = 'TruequeYaComprometidoError';
+  }
+}
+
 /** Aggregate Root — Fase 2 (BC-Trueques). `PropuestaTrueque` vive dentro del aggregate del trueque
  * ORIGEN (el que la recibe) — mismo patrón que Oferta dentro de Solicitud (Sprint 2): su ciclo de
  * vida (aceptar/rechazar) está gobernado por las invariantes del trueque origen. */
@@ -168,6 +175,14 @@ export class Trueque {
    * propuestas PENDIENTE de distintos proponentes — la aceptación es un segundo paso explícito (RF-013). */
   puedeRecibirPropuesta(): boolean {
     return this.props.estadoTrueque === 'PUBLICADO' || this.props.estadoTrueque === 'PROPUESTA_RECIBIDA';
+  }
+
+  /** Un trueque solo puede ofrecerse como contrapartida (ProponerTruequeUseCase) si no está ya
+   * comprometido en otra negociación aceptada ni finalizado — evita proponer con un objeto que ya
+   * no está disponible (aunque el chequeo que realmente cierra el gap es el de `marcarEnCoordinacion`,
+   * que corre al ACEPTAR; este es el early-check al proponer). */
+  puedeSerOfrecido(): boolean {
+    return !this.estaFinalizado() && this.props.estadoTrueque !== 'EN_COORDINACION';
   }
 
   actualizar(input: { titulo?: string; descripcion?: string; estadoObjeto?: EstadoObjeto }): void {
@@ -250,6 +265,10 @@ export class Trueque {
    * aceptada/rechazada en el trueque origen — es un aggregate distinto, se actualiza por separado. */
   marcarEnCoordinacion(): void {
     if (this.estaFinalizado()) throw new TruequeYaFinalizadoError();
+    // Cierra el gap real: sin este guard, un mismo trueque ofrecido podía aceptarse como
+    // contraparte de dos negociaciones distintas (dos orígenes distintos aceptando propuestas que
+    // apuntaban al mismo `truequeOfrecidoId`), pisándose entre sí.
+    if (this.props.estadoTrueque === 'EN_COORDINACION') throw new TruequeYaComprometidoError();
     this.props.estadoTrueque = 'EN_COORDINACION';
   }
 

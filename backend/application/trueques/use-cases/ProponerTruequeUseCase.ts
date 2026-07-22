@@ -36,6 +36,13 @@ export class OrigenIgualAOfrecidoError extends Error {
   }
 }
 
+export class TruequeOfrecidoNoDisponibleError extends Error {
+  constructor() {
+    super('El trueque que quieres ofrecer ya está comprometido en otra negociación o finalizado.');
+    this.name = 'TruequeOfrecidoNoDisponibleError';
+  }
+}
+
 /** RF-012/CU-008 Proponer trueque. NO auto-acepta (a diferencia de CU-006, Sprint 2) — crea la
  * propuesta PENDIENTE; la aceptación bilateral (RF-013) es un segundo paso explícito del dueño
  * del trueque origen (ResponderPropuestaUseCase). */
@@ -68,6 +75,9 @@ export class ProponerTruequeUseCase {
     }
     if (!truequeOfrecido.esDueño(proponenteId)) {
       throw new NoEsDueñoDelTruequeOfrecidoError();
+    }
+    if (!truequeOfrecido.puedeSerOfrecido()) {
+      throw new TruequeOfrecidoNoDisponibleError();
     }
 
     truequeOrigen.agregarPropuestaPendiente({

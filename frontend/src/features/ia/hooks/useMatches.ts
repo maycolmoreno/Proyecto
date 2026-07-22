@@ -47,5 +47,6 @@ export function useMatches(entidadTipo: EntidadTipoIA, entidadId: string | undef
     tipoCandidato,
     items,
     isLoading: matches.isLoading || candidatos.some((c) => c.isLoading),
+    isError: matches.isError,
   };
 }

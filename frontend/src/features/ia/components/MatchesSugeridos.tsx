@@ -28,9 +28,18 @@ function imagenDe(candidato: Record<string, unknown>): string | undefined {
 }
 
 export function MatchesSugeridos({ entidadTipo, entidadId }: MatchesSugeridosProps): JSX.Element | null {
-  const { items, isLoading, tipoCandidato } = useMatches(entidadTipo, entidadId);
+  const { items, isLoading, isError, tipoCandidato } = useMatches(entidadTipo, entidadId);
 
-  if (isLoading || items.length === 0) return null;
+  if (isLoading) return null;
+  if (isError) {
+    return (
+      <div>
+        <h2>Coincidencias sugeridas</h2>
+        <p className="estado-lista">No se pudieron cargar las coincidencias sugeridas. Intenta de nuevo más tarde.</p>
+      </div>
+    );
+  }
+  if (items.length === 0) return null;
 
   return (
     <div>

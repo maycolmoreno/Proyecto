@@ -6,9 +6,16 @@ import { Button } from '@shared/components/atoms/Button';
 import { useSesion } from '@features/identidad/hooks/useSesion';
 import { useCategorias } from '@features/categorias/hooks/useCategorias';
 import { useSolicitudes } from '@features/solicitudes/hooks/useSolicitudes';
+import { OfertarRapido } from '@features/solicitudes/components/OfertarRapido';
 import type { ListarSolicitudesFiltros } from '@features/solicitudes/types/index.js';
+import type { PerfilFuncional } from '@features/identidad/types/index.js';
 
-const ROLES_PUEDEN_PUBLICAR = ['BENEFICIARIO', 'USUARIO_COMUNIDAD'];
+// Opción D, Fase 3 (docs/DISENO_MODELO_PERFILES.md) — antes ROLES_PUEDEN_PUBLICAR con rol.
+// COMUNIDAD removido (ADR-049).
+const PERFILES_PUEDEN_PUBLICAR: PerfilFuncional[] = ['SOLICITANTE'];
+// Mismo criterio que SolicitudDetallePage.tsx (PERFILES_PUEDEN_OFERTAR) — repetido acá porque
+// la acción rápida vive en esta página, no en un componente compartido.
+const PERFILES_PUEDEN_OFERTAR: PerfilFuncional[] = ['DONANTE'];
 const OPCIONES_URGENCIA = [
   { valor: 'ALTA', etiqueta: 'Alta' },
   { valor: 'MEDIA', etiqueta: 'Media' },
@@ -21,7 +28,7 @@ export function SolicitudesPage(): JSX.Element {
   const categorias = useCategorias();
   const solicitudes = useSolicitudes(filtros);
 
-  const puedePublicar = sesion.data && ROLES_PUEDEN_PUBLICAR.includes(sesion.data.rol);
+  const puedePublicar = sesion.data && PERFILES_PUEDEN_PUBLICAR.some((p) => sesion.data.perfiles.includes(p));
 
   function cambiarFiltro(campo: string, valor: string): void {
     setFiltros((actuales) => ({ ...actuales, [campo]: valor || undefined, page: 1 }));
@@ -61,18 +68,29 @@ export function SolicitudesPage(): JSX.Element {
       {solicitudes.data && solicitudes.data.data.length > 0 ? (
         <>
           <div className="grid-publicaciones">
-            {solicitudes.data.data.map((solicitud) => (
-              <PublicacionCard
-                key={solicitud.id}
-                rutaDetalle={`/solicitudes/${solicitud.id}`}
-                titulo={solicitud.titulo}
-                estado={solicitud.estadoSolicitud}
-                urgencia={solicitud.urgencia}
-                ubicacion={`${solicitud.ubicacion.ciudad}, ${solicitud.ubicacion.provincia}`}
-              />
-            ))}
+            {solicitudes.data.data.map((solicitud) => {
+              const puedeOfertar =
+                sesion.data &&
+                sesion.data.id !== solicitud.beneficiarioId &&
+                PERFILES_PUEDEN_OFERTAR.some((p) => sesion.data.perfiles.includes(p)) &&
+                solicitud.estadoSolicitud === 'ABIERTA';
+              return (
+                <div key={solicitud.id} className="publicacion-card-envoltorio">
+                  <PublicacionCard
+                    rutaDetalle={`/solicitudes/${solicitud.id}`}
+                    titulo={solicitud.titulo}
+                    estado={solicitud.estadoSolicitud}
+                    urgencia={solicitud.urgencia}
+                    ubicacion={`${solicitud.ubicacion.ciudad}, ${solicitud.ubicacion.provincia}`}
+                  />
+                  {puedeOfertar ? (
+                    <OfertarRapido solicitudId={solicitud.id} categoriaId={solicitud.categoria.id} />
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
-          <div className="wizard__acciones">
+          <div className="fila-acciones">
             <Button
               type="button"
               variant="secundario"

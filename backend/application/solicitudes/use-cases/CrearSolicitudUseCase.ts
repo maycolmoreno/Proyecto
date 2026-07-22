@@ -56,7 +56,16 @@ export class CrearSolicitudUseCase {
 
     await this.solicitudRepository.crear(solicitud);
     // Fase 7 sección 5 — listener real desde Sprint 4: ModeracionIAService.
-    this.eventBus.emit('SolicitudCreada', { id: solicitud.id, titulo: input.titulo, descripcion: input.descripcion });
+    // beneficiarioId/estadoSolicitud: nuevos, consumidos por PublicacionIndexService (Fase 5
+    // diferida) — este evento antes no llevaba dueño porque nadie lo necesitaba; campos aditivos,
+    // ModeracionIAService sigue leyendo solo {id,titulo,descripcion} sin romperse.
+    this.eventBus.emit('SolicitudCreada', {
+      id: solicitud.id,
+      titulo: input.titulo,
+      descripcion: input.descripcion,
+      beneficiarioId: input.beneficiarioId,
+      estadoSolicitud: solicitud.estadoSolicitud,
+    });
     return solicitud.toJSON({ incluirUbicacionExacta: true, solicitanteId: input.beneficiarioId });
   }
 }

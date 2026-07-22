@@ -11,7 +11,7 @@ export const NAV_ITEMS: NavItem[] = [
   { ruta: '/donaciones', etiqueta: 'Donaciones', icono: '🎁' },
   { ruta: '/solicitudes', etiqueta: 'Solicitudes', icono: '🙏' },
   { ruta: '/trueques', etiqueta: 'Trueque', icono: '🔄' },
-  { ruta: '/chatbot', etiqueta: 'Chatbot IA', icono: '💬' },
+  { ruta: '/chatbot', etiqueta: 'Asistente DonaConnect', icono: '💬' },
   { ruta: '/conversaciones', etiqueta: 'Mensajes', icono: '✉️' },
   { ruta: '/perfil', etiqueta: 'Perfil', icono: '👤' },
 ];

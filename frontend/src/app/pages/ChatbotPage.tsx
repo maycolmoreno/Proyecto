@@ -21,7 +21,7 @@ export function ChatbotPage(): JSX.Element {
 
   return (
     <div>
-      <h1>Chatbot IA</h1>
+      <h1>Asistente DonaConnect</h1>
       <div className="chat-widget__mensajes chat-widget__mensajes--pagina">
         {chatbot.cargandoHistorial ? <p className="estado-lista">Cargando…</p> : null}
         {chatbot.mensajes.length === 0 && !chatbot.cargandoHistorial ? (

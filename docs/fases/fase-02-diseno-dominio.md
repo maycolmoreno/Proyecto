@@ -2,7 +2,7 @@
 
 **Estado:** ✅ Aprobada
 **Fecha de creación:** 2026-07-07
-**Última actualización:** 2026-07-07
+**Última actualización:** 2026-07-15
 **Fuente:** `SRS_DonaConnect_Ecuador_ISO29148.docx` v1.0 (§3.1, §7.1) + `docs/fases/fase-00-comprension-proyecto.md` + `docs/fases/fase-01-arquitectura-empresarial.md`
 
 ## Historial de cambios
@@ -10,6 +10,7 @@
 |---|---|
 | 2026-07-07 | Versión inicial. Subdominios estratégicos, bounded contexts, entidades, value objects, aggregates, repositories, domain services, eventos de dominio y mapeo de casos de uso. Se identifican 2 invariantes de negocio ambiguas en el SRS (ofertas/propuestas concurrentes) como preguntas abiertas. |
 | 2026-07-07 | Usuario confirma las 3 invariantes abiertas (ofertas/propuestas: solo una activa; urgencia: 3 niveles). Registrado como ADR-011. Aprobada. Se avanza a Fase 3. |
+| 2026-07-15 | **Desviación post-MVP, registrada como ADR-048** (`docs/DECISIONES.md`): el diseño original de esta fase modelaba `Rol` (BC-Identidad) como un único value object de 4 valores que mezclaba seguridad (`ADMINISTRADOR`) y capacidad de marketplace (`DONANTE`/`BENEFICIARIO`/`USUARIO_COMUNIDAD`) — un usuario no podía tener más de un rol simultáneo. Una auditoría funcional (`docs/AUDITORIA_FUNCIONAL_MARKETPLACE.md`) detectó que esto no soporta "un usuario Donante + Solicitante + Trueque a la vez" sin un enum combinatorio. Se aprobó la Opción D (`docs/DISENO_MODELO_PERFILES.md`): `Rol` se reduce a `ADMINISTRADOR\|USUARIO` (seguridad pura); se agrega `PerfilFuncional` (`DONANTE\|SOLICITANTE\|TRUEQUE\|COMUNIDAD`) como concepto independiente y multivaluado (tabla `usuarios_perfiles`, 1-a-muchos). Ningún Aggregate, entidad o Domain Service de esta fase cambió — la autorización nunca vivió en `domain/`, solo en `main/routes/*.ts` (Fase 6). Tracker de ejecución: `docs/PLAN_PERFILES.md`. |
 
 ---
 

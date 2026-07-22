@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { Usuario } from '@domain/identidad/entities/Usuario.js';
 import type { IUsuarioRepository } from '@domain/identidad/ports/IUsuarioRepository.js';
+import type { IUsuarioPerfilRepository } from '@domain/identidad/ports/IUsuarioPerfilRepository.js';
 import type { IPasswordHasher } from '@domain/identidad/ports/IPasswordHasher.js';
-import type { Rol } from '@domain/identidad/value-objects/Rol.js';
+import type { PerfilFuncional } from '@domain/identidad/value-objects/PerfilFuncional.js';
 import type { IEventBus } from '@domain/eventos/ports/IEventBus.js';
 
 export interface RegistrarUsuarioInput {
@@ -10,7 +11,10 @@ export interface RegistrarUsuarioInput {
   correo: string;
   password: string;
   telefono?: string;
-  rol: Rol;
+  /** Opción D, Fase 2 (docs/DISENO_MODELO_PERFILES.md) — reemplaza el antiguo campo `rol`.
+   * El registro público nunca crea ADMINISTRADOR (antes posible, corregido aquí de paso: era
+   * un endpoint sin autenticación que aceptaba cualquier valor del enum Rol de 4 valores). */
+  perfiles: PerfilFuncional[];
 }
 
 export class CorreoYaRegistradoError extends Error {
@@ -26,6 +30,7 @@ export class RegistrarUsuarioUseCase {
     private readonly usuarioRepository: IUsuarioRepository,
     private readonly passwordHasher: IPasswordHasher,
     private readonly eventBus: IEventBus,
+    private readonly usuarioPerfilRepository: IUsuarioPerfilRepository,
   ) {}
 
   async ejecutar(input: RegistrarUsuarioInput): Promise<Usuario> {
@@ -42,10 +47,11 @@ export class RegistrarUsuarioUseCase {
       correo: input.correo,
       passwordHash,
       telefono: input.telefono,
-      rol: input.rol,
+      rol: 'USUARIO',
     });
 
     await this.usuarioRepository.crear(usuario);
+    await Promise.all(input.perfiles.map((perfil) => this.usuarioPerfilRepository.asignarPerfil(usuario.id, perfil)));
 
     this.eventBus.emit('UsuarioRegistrado', { id: usuario.id, nombre: usuario.nombre });
 

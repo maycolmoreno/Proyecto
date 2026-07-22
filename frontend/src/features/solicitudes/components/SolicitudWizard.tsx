@@ -5,11 +5,12 @@ import { Input } from '@shared/components/atoms/Input';
 import { TextArea } from '@shared/components/atoms/TextArea';
 import { Select } from '@shared/components/atoms/Select';
 import { Button } from '@shared/components/atoms/Button';
-import { LocationPicker } from '@shared/components/molecules/LocationPicker';
+import { SelectorUbicacion } from '@shared/components/molecules/SelectorUbicacion';
 import { IASuggestionBox } from '@shared/components/molecules/IASuggestionBox';
 import { useToast } from '@shared/components/organisms/ToastProvider';
 import { claseUrgencia } from '@shared/lib/estado-color';
 import type { UbicacionInput } from '@shared/lib/ubicacion';
+import { useSesion } from '@features/identidad/hooks/useSesion';
 import { useCategorias } from '@features/categorias/hooks/useCategorias';
 import { useClasificar } from '@features/ia/hooks/useClasificar';
 import { useCrearSolicitud } from '../hooks/useCrearSolicitud.js';
@@ -42,6 +43,7 @@ export function SolicitudWizard(): JSX.Element {
   } | null>(null);
   const [sugerenciaAplicada, setSugerenciaAplicada] = useState(false);
 
+  const sesion = useSesion();
   const categorias = useCategorias();
   const crearSolicitud = useCrearSolicitud();
   const clasificar = useClasificar();
@@ -156,7 +158,9 @@ export function SolicitudWizard(): JSX.Element {
         />
       ) : null}
 
-      {paso === 4 ? <LocationPicker value={ubicacion} onChange={setUbicacion} /> : null}
+      {paso === 4 ? (
+        <SelectorUbicacion value={ubicacion} onChange={setUbicacion} ubicacionRegistrada={sesion.data?.ubicacion ?? null} />
+      ) : null}
 
       {paso === 5 ? (
         <div>

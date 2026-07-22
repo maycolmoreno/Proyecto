@@ -59,14 +59,14 @@ describe('BC-Solicitudes — flujo core', () => {
   });
 
   it('rechaza ofertar sobre la propia solicitud', async () => {
-    // USUARIO_COMUNIDAD puede tanto crear solicitudes (beneficiarioOComunidad) como ofertar
-    // (donanteOComunidad, Fase 4) — es el único rol que puede protagonizar ambos lados del intento
-    // de auto-transacción en esta prueba.
-    const comunidad = await crearUsuarioDePrueba('USUARIO_COMUNIDAD');
+    // USUARIO_COMUNIDAD (persona de prueba con los 3 perfiles) puede tanto crear solicitudes
+    // (soloSolicitante) como ofertar (soloDonante, Fase 4) — es el único que puede protagonizar
+    // ambos lados del intento de auto-transacción en esta prueba.
+    const multiPerfil = await crearUsuarioDePrueba('USUARIO_COMUNIDAD');
 
     const donacionRes = await request(app)
       .post('/api/v1/donaciones')
-      .set('Authorization', `Bearer ${comunidad.token}`)
+      .set('Authorization', `Bearer ${multiPerfil.token}`)
       .send({
         titulo: 'Donación auto-oferta Vitest',
         descripcion: 'Descripción',
@@ -78,7 +78,7 @@ describe('BC-Solicitudes — flujo core', () => {
 
     const solicitudRes = await request(app)
       .post('/api/v1/solicitudes')
-      .set('Authorization', `Bearer ${comunidad.token}`)
+      .set('Authorization', `Bearer ${multiPerfil.token}`)
       .send({
         titulo: 'Solicitud propia Vitest',
         descripcion: 'Descripción',
@@ -90,7 +90,7 @@ describe('BC-Solicitudes — flujo core', () => {
 
     await request(app)
       .post(`/api/v1/solicitudes/${solicitudRes.body.data.id}/ofertas`)
-      .set('Authorization', `Bearer ${comunidad.token}`)
+      .set('Authorization', `Bearer ${multiPerfil.token}`)
       .send({ donacionId: donacionRes.body.data.id })
       .expect(400);
   });

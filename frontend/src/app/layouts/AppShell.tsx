@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Navbar } from '@shared/components/organisms/Navbar';
 import { Sidebar } from '@shared/components/organisms/Sidebar';
 import { BottomTabBar } from '@shared/components/organisms/BottomTabBar';
+import { Footer } from '@shared/components/organisms/Footer';
 import { NAV_ITEMS, NAV_ITEMS_MOBILE, NAV_ITEMS_MAS } from '@shared/lib/nav-items';
 import { useSesion, useCerrarSesion } from '@features/identidad/hooks/useSesion';
 import { ChatWidget } from '@features/chatbot/components/ChatWidget';
@@ -15,6 +16,7 @@ import { PanelNotificaciones } from '@features/notificaciones/components/PanelNo
 export function AppShell(): JSX.Element {
   const sesion = useSesion();
   const cerrarSesion = useCerrarSesion();
+  const location = useLocation();
   const [panelAbierto, setPanelAbierto] = useState(false);
   // Habilitado solo con sesión (GET /notificaciones exige authMiddleware) — comparte queryKey con
   // PanelNotificaciones, TanStack Query deduplica la petición real.
@@ -33,12 +35,15 @@ export function AppShell(): JSX.Element {
         <Sidebar items={NAV_ITEMS} />
         <main className="shell__contenido">
           <Outlet />
+          <Footer />
         </main>
       </div>
       <BottomTabBar items={NAV_ITEMS_MOBILE} itemsMas={NAV_ITEMS_MAS} />
       {/* Ícono flotante visible en toda página del shell, solo con sesión activa (POST
-          /chatbot/mensajes exige authMiddleware) — Fase 5, sección 3. */}
-      {sesion.data ? <ChatWidget /> : null}
+          /chatbot/mensajes exige authMiddleware) — Fase 5, sección 3. Oculto en /chatbot: esa
+          página ya es el mismo asistente a pantalla completa, mostrar el widget ahí sería
+          redundante (mismo useChatbot, misma conversación). */}
+      {sesion.data && location.pathname !== '/chatbot' ? <ChatWidget /> : null}
       {sesion.data ? <PanelNotificaciones abierto={panelAbierto} onCerrar={() => setPanelAbierto(false)} /> : null}
     </div>
   );
