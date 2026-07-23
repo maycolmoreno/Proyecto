@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { Stepper } from '@shared/components/molecules/Stepper';
 import { Input } from '@shared/components/atoms/Input';
@@ -68,6 +69,7 @@ export function DonacionWizard(): JSX.Element {
   const clasificar = useClasificar();
   const { mostrarToast } = useToast();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const prefiereReducirMovimiento = useReducedMotion();
 
   async function sugerirConIA(): Promise<void> {
@@ -146,6 +148,11 @@ export function DonacionWizard(): JSX.Element {
       mostrarToast('Donación publicada con éxito.', 'exito');
     } catch {
       mostrarToast('Donación publicada, pero no se pudieron subir todas las fotos. Podés agregarlas desde el detalle.', 'info');
+    } finally {
+      // `crearDonacion` invalidó ['donaciones'] antes de que existieran las fotos — sin esto, el
+      // listado se queda con la versión sin foto en caché hasta el próximo montaje (bug real
+      // reportado por el usuario: "subo la foto y la tarjeta sigue mostrando el cartón") 2026-07-23.
+      await queryClient.invalidateQueries({ queryKey: ['donaciones'] });
     }
 
     setPublicando(false);

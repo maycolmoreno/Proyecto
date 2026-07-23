@@ -1073,6 +1073,22 @@ body {
   border-radius: var(--radius-tarjeta);
 }
 
+/* Dentro de .detalle-ficha específicamente, sobrescribe .lista-datos__fila (que sigue con líneas
+   divisorias en PerfilPage, sin tocar) — filas cortas ícono+etiqueta / valor, sin separadores,
+   feedback del usuario 2026-07-22: la lista con líneas se sentía "de tabla", no de ficha. */
+.detalle-ficha .lista-datos__fila {
+  padding: var(--espacio-2) 0;
+  border-bottom: none;
+}
+
+.detalle-ficha .lista-datos__fila dt {
+  font-size: 0.9375rem;
+}
+
+.detalle-ficha .lista-datos__fila dd {
+  text-align: right;
+}
+
 /* Layout de 2 columnas del detalle de Donación (rediseño 2026-07-22) — columna principal +
    sidebar con identidad del donante, CTA de reserva y una tarjeta informativa estática. Colapsa a
    una sola columna en pantallas angostas. */
@@ -1150,6 +1166,7 @@ body {
   font-size: 1rem;
   cursor: pointer;
 }
+
 
 /* "¿Qué incluye?" del wizard de Donación — input + botón "Agregar" en una fila. */
 .fila-agregar-item {

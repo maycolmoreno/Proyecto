@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { Stepper } from '@shared/components/molecules/Stepper';
 import { Input } from '@shared/components/atoms/Input';
@@ -65,6 +66,7 @@ export function TruequeWizard(): JSX.Element {
   const clasificar = useClasificar();
   const { mostrarToast } = useToast();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const prefiereReducirMovimiento = useReducedMotion();
   // Se dispara ni bien hay id (mismo query que MatchesSugeridos, TanStack Query la deduplica) —
   // se usa acá solo para controlar los mensajes de carga/vacío/error del paso de resultado.
@@ -135,6 +137,10 @@ export function TruequeWizard(): JSX.Element {
       mostrarToast('Trueque publicado con éxito.', 'exito');
     } catch {
       mostrarToast('Trueque publicado, pero no se pudieron subir todas las fotos. Podés agregarlas desde el detalle.', 'info');
+    } finally {
+      // `crearTrueque` invalidó ['trueques'] antes de que existieran las fotos — sin esto, el
+      // listado se queda con la versión sin foto en caché (mismo bug real de DonacionWizard) 2026-07-23.
+      await queryClient.invalidateQueries({ queryKey: ['trueques'] });
     }
 
     setPublicando(false);

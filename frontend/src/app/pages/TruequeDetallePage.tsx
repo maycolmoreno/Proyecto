@@ -123,127 +123,138 @@ export function TruequeDetallePage(): JSX.Element {
   }
 
   return (
-    <div className="detalle-pagina">
-      <GaleriaImagenes imagenes={trueque.data.imagenes} />
-      <div className="detalle-pagina__encabezado">
-        <StatusBadge estado={trueque.data.estadoTrueque} />
-        {!esDueño && sesion.data ? (
-          <button
-            type="button"
-            className="boton-favorito-detalle"
-            onClick={alternarFavorito}
-            aria-pressed={favorito}
-            disabled={toggleFavorito.isPending}
-          >
-            {favorito ? '❤️ Guardado' : '🤍 Guardar'}
-          </button>
-        ) : null}
-      </div>
-      <h1>{trueque.data.titulo}</h1>
-      <p style={{ whiteSpace: 'pre-wrap' }}>{trueque.data.descripcion}</p>
-
-      <dl className="detalle-ficha lista-datos">
-        <div className="lista-datos__fila">
-          <dt>Categoría</dt>
-          <dd>{trueque.data.categoria.nombre}</dd>
-        </div>
-        <div className="lista-datos__fila">
-          <dt>Condición</dt>
-          <dd>{etiquetaEstadoObjeto(trueque.data.estadoObjeto)}</dd>
-        </div>
-        <div className="lista-datos__fila">
-          <dt>Publicado</dt>
-          <dd>{formatearUltimaActividad(trueque.data.fecha)}</dd>
-        </div>
-      </dl>
-
-      {!esDueño && publicador.data ? (
-        <TarjetaAutor nombre={publicador.data.nombre}>
-          {!puedeProponer && !miPropuestaActiva && sesion.data ? (
-            <Link to={`/conversaciones/${trueque.data.usuarioId}`}>💬 Enviar mensaje</Link>
+    <div className="detalle-layout">
+      <div className="detalle-layout__principal detalle-pagina">
+        <GaleriaImagenes imagenes={trueque.data.imagenes} />
+        <div className="detalle-pagina__encabezado">
+          <StatusBadge estado={trueque.data.estadoTrueque} />
+          {!esDueño && sesion.data ? (
+            <button
+              type="button"
+              className="boton-favorito-detalle"
+              onClick={alternarFavorito}
+              aria-pressed={favorito}
+              disabled={toggleFavorito.isPending}
+            >
+              {favorito ? '❤️ Guardado' : '🤍 Guardar'}
+            </button>
           ) : null}
-        </TarjetaAutor>
-      ) : null}
+        </div>
+        <h1>{trueque.data.titulo}</h1>
+        <p style={{ whiteSpace: 'pre-wrap' }}>{trueque.data.descripcion}</p>
 
-      {esDueño ? (
-        <>
-          <ImageUploader imagenes={trueque.data.imagenes} onFirmar={imagenes.firmar} onRegistrar={imagenes.registrar} />
-          {!finalizado ? (
-            <Button variant="peligro" onClick={() => setModalCancelarAbierto(true)}>
-              Cancelar trueque
-            </Button>
-          ) : null}
-        </>
-      ) : null}
+        <dl className="detalle-ficha lista-datos">
+          <div className="lista-datos__fila">
+            <dt>🏷️ Categoría</dt>
+            <dd>{trueque.data.categoria.nombre}</dd>
+          </div>
+          <div className="lista-datos__fila">
+            <dt>🔧 Condición</dt>
+            <dd>{etiquetaEstadoObjeto(trueque.data.estadoObjeto)}</dd>
+          </div>
+          <div className="lista-datos__fila">
+            <dt>📅 Publicado</dt>
+            <dd>{formatearUltimaActividad(trueque.data.fecha)}</dd>
+          </div>
+        </dl>
 
-      {puedeProponer ? (
-        <div>
-          <h2>Proponer intercambio</h2>
-          {misTruequesDisponibles.length === 0 ? (
-            <p>Publica un objeto para trueque antes de poder proponer un intercambio.</p>
-          ) : (
-            <>
-              <Select
-                label="Elige uno de tus objetos publicados"
-                name="truequeOfrecidoId"
-                value={truequeOfrecidoId}
-                onChange={(e) => setTruequeOfrecidoId(e.target.value)}
-                opciones={misTruequesDisponibles.map((t) => ({ valor: t.id, etiqueta: t.titulo }))}
-                placeholder="Selecciona un objeto"
-                required
-              />
-              <Button type="button" onClick={proponer} disabled={!truequeOfrecidoId || proponerTrueque.isPending}>
-                {proponerTrueque.isPending ? 'Enviando…' : 'Proponer intercambio'}
+        {esDueño ? (
+          <>
+            <ImageUploader imagenes={trueque.data.imagenes} onFirmar={imagenes.firmar} onRegistrar={imagenes.registrar} />
+            {!finalizado ? (
+              <Button variant="peligro" onClick={() => setModalCancelarAbierto(true)}>
+                Cancelar trueque
               </Button>
-            </>
-          )}
-        </div>
-      ) : null}
+            ) : null}
+          </>
+        ) : null}
 
-      {miPropuestaActiva ? (
-        <p>
-          Tu propuesta está <StatusBadge estado={miPropuestaActiva.estado} />
-        </p>
-      ) : null}
-
-      {esDueño && trueque.data.propuestasRecibidas.length > 0 ? (
-        <div>
-          <h2>Propuestas recibidas</h2>
-          {trueque.data.propuestasRecibidas.map((propuesta) => (
-            <div key={propuesta.id} className="oferta-item">
-              <StatusBadge estado={propuesta.estado} />{' '}
-              <Link to={`/trueques/${propuesta.truequeOfrecidoId}`}>Ver objeto ofrecido</Link>
-              {propuesta.estado === 'PENDIENTE' ? (
-                <>
-                  <Button onClick={() => aceptar(propuesta.id)} disabled={responderPropuesta.aceptar.isPending}>
-                    Aceptar
-                  </Button>
+        {esDueño && trueque.data.propuestasRecibidas.length > 0 ? (
+          <div>
+            <h2>Propuestas recibidas</h2>
+            {trueque.data.propuestasRecibidas.map((propuesta) => (
+              <div key={propuesta.id} className="oferta-item">
+                <StatusBadge estado={propuesta.estado} />{' '}
+                <Link to={`/trueques/${propuesta.truequeOfrecidoId}`}>Ver objeto ofrecido</Link>
+                {propuesta.estado === 'PENDIENTE' ? (
+                  <>
+                    <Button onClick={() => aceptar(propuesta.id)} disabled={responderPropuesta.aceptar.isPending}>
+                      Aceptar
+                    </Button>
+                    <Button variant="peligro" onClick={() => rechazar(propuesta.id)} disabled={responderPropuesta.rechazar.isPending}>
+                      Rechazar
+                    </Button>
+                  </>
+                ) : null}
+                {propuesta.estado === 'ACEPTADA' ? (
                   <Button variant="peligro" onClick={() => rechazar(propuesta.id)} disabled={responderPropuesta.rechazar.isPending}>
                     Rechazar
                   </Button>
-                </>
-              ) : null}
-              {propuesta.estado === 'ACEPTADA' ? (
-                <Button variant="peligro" onClick={() => rechazar(propuesta.id)} disabled={responderPropuesta.rechazar.isPending}>
-                  Rechazar
-                </Button>
-              ) : null}
-            </div>
-          ))}
-        </div>
-      ) : null}
+                ) : null}
+              </div>
+            ))}
+          </div>
+        ) : null}
 
-      <CoordinacionEntrega
-        idReferencia={trueque.data.id}
-        otroParticipanteId={esDueño ? propuestaAceptada?.usuarioProponenteId : trueque.data.usuarioId}
-      />
-      <MatchesSugeridos entidadTipo="TRUEQUE" entidadId={trueque.data.id} />
-      {esLadoOfrecido ? (
-        <p className="estado-lista">
-          Este objeto fue aceptado como parte de un intercambio — revisa la coordinación de entrega desde el trueque
-          con el que lo ofertaste.
-        </p>
-      ) : null}
+        <CoordinacionEntrega
+          idReferencia={trueque.data.id}
+          otroParticipanteId={esDueño ? propuestaAceptada?.usuarioProponenteId : trueque.data.usuarioId}
+        />
+        <MatchesSugeridos entidadTipo="TRUEQUE" entidadId={trueque.data.id} />
+        {esLadoOfrecido ? (
+          <p className="estado-lista">
+            Este objeto fue aceptado como parte de un intercambio — revisa la coordinación de entrega desde el trueque
+            con el que lo ofertaste.
+          </p>
+        ) : null}
+      </div>
+
+      <aside className="detalle-layout__sidebar">
+        {!esDueño && publicador.data ? (
+          <TarjetaAutor nombre={publicador.data.nombre}>
+            {!puedeProponer && !miPropuestaActiva && sesion.data ? (
+              <Link to={`/conversaciones/${trueque.data.usuarioId}`}>💬 Enviar mensaje</Link>
+            ) : null}
+          </TarjetaAutor>
+        ) : null}
+
+        {!esDueño ? (
+          <div className="tarjeta tarjeta-impacto">
+            <h3>Intercambiar le da una segunda vida a tus cosas</h3>
+            <p>Sin dinero de por medio: ambos se llevan algo que sí van a usar, y nada termina en la basura.</p>
+          </div>
+        ) : null}
+
+        {miPropuestaActiva ? (
+          <p>
+            Tu propuesta está <StatusBadge estado={miPropuestaActiva.estado} />
+          </p>
+        ) : null}
+
+        {puedeProponer ? (
+          <div className="tarjeta">
+            <h3>Proponer intercambio</h3>
+            {misTruequesDisponibles.length === 0 ? (
+              <p>Publica un objeto para trueque antes de poder proponer un intercambio.</p>
+            ) : (
+              <>
+                <Select
+                  label="Elige uno de tus objetos publicados"
+                  name="truequeOfrecidoId"
+                  value={truequeOfrecidoId}
+                  onChange={(e) => setTruequeOfrecidoId(e.target.value)}
+                  opciones={misTruequesDisponibles.map((t) => ({ valor: t.id, etiqueta: t.titulo }))}
+                  placeholder="Selecciona un objeto"
+                  required
+                />
+                <Button type="button" onClick={proponer} disabled={!truequeOfrecidoId || proponerTrueque.isPending}>
+                  {proponerTrueque.isPending ? 'Enviando…' : 'Proponer intercambio'}
+                </Button>
+              </>
+            )}
+          </div>
+        ) : null}
+      </aside>
 
       {modalCancelarAbierto ? (
         <Modal

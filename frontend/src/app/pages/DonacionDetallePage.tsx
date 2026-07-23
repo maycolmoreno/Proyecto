@@ -138,21 +138,21 @@ export function DonacionDetallePage(): JSX.Element {
 
         <dl className="detalle-ficha lista-datos">
           <div className="lista-datos__fila">
-            <dt>Categoría</dt>
+            <dt>🏷️ Categoría</dt>
             <dd>{donacion.data.categoria.nombre}</dd>
           </div>
           <div className="lista-datos__fila">
-            <dt>Condición</dt>
+            <dt>🔧 Condición</dt>
             <dd>{etiquetaEstadoObjeto(donacion.data.estadoObjeto)}</dd>
           </div>
           {donacion.data.ubicacionRetiro ? (
             <div className="lista-datos__fila">
-              <dt>Ubicación de retiro</dt>
+              <dt>📍 Ubicación de retiro</dt>
               <dd>{donacion.data.ubicacionRetiro.ciudad}</dd>
             </div>
           ) : null}
           <div className="lista-datos__fila">
-            <dt>Publicado</dt>
+            <dt>📅 Publicado</dt>
             <dd>{formatearUltimaActividad(donacion.data.fecha)}</dd>
           </div>
         </dl>
