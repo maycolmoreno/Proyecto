@@ -1,15 +1,9 @@
 import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { StatusBadge } from '@shared/components/atoms/StatusBadge';
 import { Button } from '@shared/components/atoms/Button';
-import { TextArea } from '@shared/components/atoms/TextArea';
 import { Modal } from '@shared/components/organisms/Modal';
-import { ImageUploader } from '@shared/components/molecules/ImageUploader';
-import { GaleriaImagenes } from '@shared/components/molecules/GaleriaImagenes';
-import { TarjetaAutor } from '@shared/components/molecules/TarjetaAutor';
 import { useToast } from '@shared/components/organisms/ToastProvider';
-import { etiquetaEstadoObjeto } from '@shared/lib/estado-color';
-import { formatearUltimaActividad } from '@shared/lib/fecha';
 import { useSesion } from '@features/identidad/hooks/useSesion';
 import { useUsuarioPublico } from '@features/identidad/hooks/useUsuarioPublico';
 import { useDonacion } from '@features/donaciones/hooks/useDonacion';
@@ -21,6 +15,16 @@ import { useEsFavorito } from '@features/favoritos/hooks/useEsFavorito';
 import { useToggleFavorito } from '@features/favoritos/hooks/useToggleFavorito';
 import { CoordinacionEntrega } from '@features/entregas/components/CoordinacionEntrega';
 import { MatchesSugeridos } from '@features/ia/components/MatchesSugeridos';
+import { DonationBreadcrumb } from '@features/donaciones/components/DonationBreadcrumb';
+import { DonationGallery } from '@features/donaciones/components/DonationGallery';
+import { DonationSummaryCard } from '@features/donaciones/components/DonationSummaryCard';
+import { DonationActions } from '@features/donaciones/components/DonationActions';
+import { DonationDescription } from '@features/donaciones/components/DonationDescription';
+import { DonationAttributes } from '@features/donaciones/components/DonationAttributes';
+import { DeliveryDetails } from '@features/donaciones/components/DeliveryDetails';
+import { DonationLocation } from '@features/donaciones/components/DonationLocation';
+import { DonorCard } from '@features/donaciones/components/DonorCard';
+import { SafetyTips } from '@features/donaciones/components/SafetyTips';
 import { ApiError } from '@shared/lib/http-client';
 import type { PerfilFuncional } from '@features/identidad/types/index.js';
 
@@ -28,6 +32,12 @@ import type { PerfilFuncional } from '@features/identidad/types/index.js';
 // gatea por perfil funcional, no por rol.
 const PERFILES_PUEDEN_RESERVAR: PerfilFuncional[] = ['SOLICITANTE'];
 
+// Rediseño visual (2026-07-23, pedido del usuario) — ficha tipo marketplace. Toda la lógica de
+// negocio (hooks, handlers, condiciones de permiso) es la MISMA que la versión anterior de este
+// archivo; solo cambia cómo se compone el JSX (delegado a los componentes de
+// features/donaciones/components/Donation*). Ver esos archivos para el detalle de qué se omitió
+// del mockup de referencia por no tener respaldo real en el backend (edición, pausar/reactivar,
+// atributos inexistentes, datos del donante no expuestos, etc.).
 export function DonacionDetallePage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const [modalCancelarAbierto, setModalCancelarAbierto] = useState(false);
@@ -44,8 +54,32 @@ export function DonacionDetallePage(): JSX.Element {
   const { mostrarToast } = useToast();
   const navigate = useNavigate();
 
-  if (donacion.isLoading) return <p className="estado-lista">Cargando…</p>;
-  if (donacion.isError || !donacion.data) return <p className="estado-lista">No se encontró esta donación.</p>;
+  if (donacion.isLoading) {
+    return (
+      <div className="donacion-detalle-pagina">
+        <div className="donacion-skeleton">
+          <div className="donacion-skeleton__galeria skeleton" />
+          <div className="donacion-skeleton__info">
+            <div className="skeleton donacion-skeleton__linea donacion-skeleton__linea--corta" />
+            <div className="skeleton donacion-skeleton__linea" />
+            <div className="skeleton donacion-skeleton__linea" />
+            <div className="skeleton donacion-skeleton__linea donacion-skeleton__linea--corta" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (donacion.isError || !donacion.data) {
+    return (
+      <div className="estado-lista">
+        <p>No se pudo cargar esta donación.</p>
+        <Button type="button" variant="secundario" onClick={() => donacion.refetch()}>
+          Reintentar
+        </Button>
+      </div>
+    );
+  }
 
   const esDueño = sesion.data?.id === donacion.data.donanteId;
   const miReservaActiva = donacion.data.reservas.find(
@@ -58,6 +92,7 @@ export function DonacionDetallePage(): JSX.Element {
     donacion.data.estadoDonacion === 'PUBLICADA' &&
     !miReservaActiva;
   const reservaAceptada = donacion.data.reservas.find((r) => r.estado === 'ACEPTADA');
+  const puedeGuardar = !esDueño && Boolean(sesion.data);
 
   async function confirmarCancelacion(): Promise<void> {
     try {
@@ -107,145 +142,70 @@ export function DonacionDetallePage(): JSX.Element {
   }
 
   return (
-    <div className="detalle-layout">
-      <div className="detalle-layout__principal detalle-pagina">
-        <GaleriaImagenes imagenes={donacion.data.imagenes} />
-        <div className="detalle-pagina__encabezado">
-          <StatusBadge estado={donacion.data.estadoDonacion} />
-          {!esDueño && sesion.data ? (
-            <button
-              type="button"
-              className="boton-favorito-detalle"
-              onClick={alternarFavorito}
-              aria-pressed={favorito}
-              disabled={toggleFavorito.isPending}
-            >
-              {favorito ? '❤️ Guardado' : '🤍 Guardar'}
-            </button>
-          ) : null}
-        </div>
-        <h1>{donacion.data.titulo}</h1>
-        <p>{donacion.data.descripcion}</p>
-        {donacion.data.itemsIncluidos.length > 0 ? (
-          <div className="chips">
-            {donacion.data.itemsIncluidos.map((item) => (
-              <span key={item} className="chip">
-                {item}
-              </span>
-            ))}
-          </div>
-        ) : null}
+    <div className="donacion-detalle-pagina">
+      <DonationBreadcrumb categoriaNombre={donacion.data.categoria.nombre} tituloPublicacion={donacion.data.titulo} />
 
-        <dl className="detalle-ficha lista-datos">
-          <div className="lista-datos__fila">
-            <dt>🏷️ Categoría</dt>
-            <dd>{donacion.data.categoria.nombre}</dd>
-          </div>
-          <div className="lista-datos__fila">
-            <dt>🔧 Condición</dt>
-            <dd>{etiquetaEstadoObjeto(donacion.data.estadoObjeto)}</dd>
-          </div>
-          {donacion.data.ubicacionRetiro ? (
-            <div className="lista-datos__fila">
-              <dt>📍 Ubicación de retiro</dt>
-              <dd>{donacion.data.ubicacionRetiro.ciudad}</dd>
-            </div>
-          ) : null}
-          <div className="lista-datos__fila">
-            <dt>📅 Publicado</dt>
-            <dd>{formatearUltimaActividad(donacion.data.fecha)}</dd>
-          </div>
-        </dl>
-
-        {esDueño ? (
-          <>
-            <ImageUploader imagenes={donacion.data.imagenes} onFirmar={imagenes.firmar} onRegistrar={imagenes.registrar} />
-            <Button variant="peligro" onClick={() => setModalCancelarAbierto(true)}>
-              Cancelar donación
-            </Button>
-          </>
-        ) : null}
-
-        {esDueño && donacion.data.reservas.length > 0 ? (
-          <div>
-            <h2>Reservas recibidas</h2>
-            {donacion.data.reservas.map((reserva) => (
-              <div key={reserva.id} className="oferta-item">
-                <StatusBadge estado={reserva.estado} />
-                {reserva.mensaje ? <p>{reserva.mensaje}</p> : null}
-                {reserva.estado === 'PENDIENTE' ? (
-                  <>
-                    <Button onClick={() => aceptarReserva(reserva.id)} disabled={responderReserva.aceptar.isPending}>
-                      Aceptar
-                    </Button>
-                    <Button
-                      variant="peligro"
-                      onClick={() => rechazarReserva(reserva.id)}
-                      disabled={responderReserva.rechazar.isPending}
-                    >
-                      Rechazar
-                    </Button>
-                  </>
-                ) : null}
-                {reserva.estado === 'ACEPTADA' ? (
-                  <Button
-                    variant="peligro"
-                    onClick={() => rechazarReserva(reserva.id)}
-                    disabled={responderReserva.rechazar.isPending}
-                  >
-                    Rechazar
-                  </Button>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        ) : null}
-
-        {/* otroParticipanteId: si el compromiso vino de una reserva aceptada, el interesado es la
-            contraparte válida — antes solo se resolvía el caso de Oferta vía Solicitud (undefined
-            para el dueño), dejando a quien reservó sin forma de ver su propia Entrega. */}
-        <CoordinacionEntrega
-          idReferencia={donacion.data.id}
-          otroParticipanteId={esDueño ? reservaAceptada?.usuarioInteresadoId : donacion.data.donanteId}
+      <div className="donacion-detalle-grid">
+        <DonationGallery
+          imagenes={donacion.data.imagenes}
+          titulo={donacion.data.titulo}
+          estadoBadge={<StatusBadge estado={donacion.data.estadoDonacion} />}
         />
-        <MatchesSugeridos entidadTipo="DONACION" entidadId={donacion.data.id} />
+
+        <div className="donacion-detalle-grid__info">
+          <DonationSummaryCard
+            donacion={donacion.data}
+            puedeGuardar={puedeGuardar}
+            esFavorito={favorito}
+            onAlternarFavorito={alternarFavorito}
+            guardandoFavorito={toggleFavorito.isPending}
+          />
+
+          <DonationActions
+            donacion={donacion.data}
+            esDueño={esDueño}
+            haySesion={Boolean(sesion.data)}
+            puedeReservar={Boolean(puedeReservar)}
+            miReservaActiva={miReservaActiva}
+            mensajeReserva={mensajeReserva}
+            onMensajeReservaChange={setMensajeReserva}
+            onReservar={reservar}
+            reservando={crearReserva.isPending}
+            onAceptarReserva={aceptarReserva}
+            onRechazarReserva={rechazarReserva}
+            aceptandoReserva={responderReserva.aceptar.isPending}
+            rechazandoReserva={responderReserva.rechazar.isPending}
+            onAbrirCancelar={() => setModalCancelarAbierto(true)}
+            onFirmarImagen={imagenes.firmar}
+            onRegistrarImagen={imagenes.registrar}
+          />
+        </div>
       </div>
 
-      <aside className="detalle-layout__sidebar">
-        {!esDueño && donante.data ? (
-          <TarjetaAutor nombre={donante.data.nombre}>
-            {sesion.data ? <Link to={`/conversaciones/${donacion.data.donanteId}`}>💬 Contactar al donante</Link> : null}
-          </TarjetaAutor>
-        ) : null}
+      {/* otroParticipanteId: si el compromiso vino de una reserva aceptada, el interesado es la
+          contraparte válida — antes solo se resolvía el caso de Oferta vía Solicitud (undefined
+          para el dueño), dejando a quien reservó sin forma de ver su propia Entrega. */}
+      <CoordinacionEntrega
+        idReferencia={donacion.data.id}
+        otroParticipanteId={esDueño ? reservaAceptada?.usuarioInteresadoId : donacion.data.donanteId}
+      />
 
-        {!esDueño ? (
-          <div className="tarjeta tarjeta-impacto">
-            <h3>Tu interés genera un gran impacto</h3>
-            <p>Ayudas a familias en necesidad, reduces el desperdicio y fortaleces tu comunidad.</p>
-          </div>
-        ) : null}
+      <div className="donacion-detalle-secciones">
+        <div className="donacion-detalle-secciones__columna">
+          <DonationDescription descripcion={donacion.data.descripcion} />
+          <DonationAttributes itemsIncluidos={donacion.data.itemsIncluidos} />
+        </div>
+        <div className="donacion-detalle-secciones__columna">
+          <DeliveryDetails requiereRetiro={donacion.data.requiereRetiro} ubicacionRetiro={donacion.data.ubicacionRetiro} />
+          <DonationLocation ubicacionRetiro={donacion.data.ubicacionRetiro} />
+        </div>
+        <div className="donacion-detalle-secciones__columna">
+          <DonorCard esDueño={esDueño} nombreDonante={donante.data?.nombre} donanteId={donacion.data.donanteId} haySesion={Boolean(sesion.data)} />
+          <SafetyTips />
+        </div>
+      </div>
 
-        {miReservaActiva ? (
-          <p>
-            Tu reserva está <StatusBadge estado={miReservaActiva.estado} />
-          </p>
-        ) : null}
-
-        {puedeReservar ? (
-          <div className="tarjeta">
-            <h3>¿Te interesa este artículo?</h3>
-            <TextArea
-              label="Mensaje para el donante (opcional)"
-              name="mensajeReserva"
-              value={mensajeReserva}
-              onChange={(e) => setMensajeReserva(e.target.value)}
-            />
-            <Button type="button" onClick={reservar} disabled={crearReserva.isPending}>
-              {crearReserva.isPending ? 'Enviando…' : 'Quiero este artículo'}
-            </Button>
-          </div>
-        ) : null}
-      </aside>
+      <MatchesSugeridos entidadTipo="DONACION" entidadId={donacion.data.id} />
 
       {modalCancelarAbierto ? (
         <Modal

@@ -35,27 +35,35 @@ export function AdminPage(): JSX.Element {
   }
 
   return (
-    <div>
-      <h1>Administración</h1>
-      <div role="tablist" aria-label="Secciones de administración">
-        <button type="button" role="tab" aria-selected={tab === 'usuarios'} onClick={() => setTab('usuarios')}>
+    <div className="admin-pagina">
+      <div className="pagina-encabezado">
+        <div className="pagina-encabezado__texto">
+          <span className="pagina-encabezado__eyebrow">Gestión interna</span>
+          <h1>Administración</h1>
+          <p>Supervisa usuarios, publicaciones, reportes y categorías de la plataforma.</p>
+        </div>
+      </div>
+      <div className="tabs tabs--panel" role="tablist" aria-label="Secciones de administración">
+        <button className="tabs__item" type="button" role="tab" aria-selected={tab === 'usuarios'} onClick={() => setTab('usuarios')}>
           Usuarios
         </button>
-        <button type="button" role="tab" aria-selected={tab === 'publicaciones'} onClick={() => setTab('publicaciones')}>
+        <button className="tabs__item" type="button" role="tab" aria-selected={tab === 'publicaciones'} onClick={() => setTab('publicaciones')}>
           Publicaciones
         </button>
-        <button type="button" role="tab" aria-selected={tab === 'reportes'} onClick={() => setTab('reportes')}>
+        <button className="tabs__item" type="button" role="tab" aria-selected={tab === 'reportes'} onClick={() => setTab('reportes')}>
           Reportes
         </button>
-        <button type="button" role="tab" aria-selected={tab === 'categorias'} onClick={() => setTab('categorias')}>
+        <button className="tabs__item" type="button" role="tab" aria-selected={tab === 'categorias'} onClick={() => setTab('categorias')}>
           Categorías
         </button>
       </div>
 
-      {tab === 'usuarios' ? <TabUsuarios /> : null}
-      {tab === 'publicaciones' ? <TabPublicaciones /> : null}
-      {tab === 'reportes' ? <TabReportes /> : null}
-      {tab === 'categorias' ? <TabCategorias /> : null}
+      <section className="admin-panel">
+        {tab === 'usuarios' ? <TabUsuarios /> : null}
+        {tab === 'publicaciones' ? <TabPublicaciones /> : null}
+        {tab === 'reportes' ? <TabReportes /> : null}
+        {tab === 'categorias' ? <TabCategorias /> : null}
+      </section>
     </div>
   );
 }
@@ -152,14 +160,14 @@ function TabPublicaciones(): JSX.Element {
 
   return (
     <div>
-      <div role="tablist" aria-label="Tipo de publicación">
-        <button type="button" role="tab" aria-selected={tipo === 'DONACION'} onClick={() => setTipo('DONACION')}>
+      <div className="tabs tabs--compactas" role="tablist" aria-label="Tipo de publicación">
+        <button className="tabs__item" type="button" role="tab" aria-selected={tipo === 'DONACION'} onClick={() => setTipo('DONACION')}>
           Donaciones
         </button>
-        <button type="button" role="tab" aria-selected={tipo === 'SOLICITUD'} onClick={() => setTipo('SOLICITUD')}>
+        <button className="tabs__item" type="button" role="tab" aria-selected={tipo === 'SOLICITUD'} onClick={() => setTipo('SOLICITUD')}>
           Solicitudes
         </button>
-        <button type="button" role="tab" aria-selected={tipo === 'TRUEQUE'} onClick={() => setTipo('TRUEQUE')}>
+        <button className="tabs__item" type="button" role="tab" aria-selected={tipo === 'TRUEQUE'} onClick={() => setTipo('TRUEQUE')}>
           Trueques
         </button>
       </div>

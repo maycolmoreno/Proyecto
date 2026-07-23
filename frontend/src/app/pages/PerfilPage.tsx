@@ -82,13 +82,27 @@ export function PerfilPage(): JSX.Element {
 
   return (
     <div className="perfil-pagina">
-      <div className="perfil-encabezado">
-        <Avatar nombre={usuario.nombre} />
-        <div>
-          <h1>{usuario.nombre}</h1>
-          <p className="perfil-encabezado__correo">{usuario.correo}</p>
+      <div className="pagina-encabezado">
+        <div className="pagina-encabezado__texto">
+          <span className="pagina-encabezado__eyebrow">Tu cuenta</span>
+          <h1>Mi perfil</h1>
+          <p>Administra tu información y preferencias dentro de DonaConnect.</p>
         </div>
       </div>
+
+      <section className="perfil-encabezado">
+        <div className="perfil-encabezado__identidad">
+          <Avatar nombre={usuario.nombre} />
+          <div>
+            <h2>{usuario.nombre}</h2>
+            <p className="perfil-encabezado__correo">{usuario.correo}</p>
+            <span className="perfil-encabezado__rol">{usuario.rol}</span>
+          </div>
+        </div>
+        <Link to="/publicaciones/mias" className="btn btn--secundario">
+          Mis publicaciones
+        </Link>
+      </section>
 
       {publicaciones.data ? (
         <div className="grid-publicaciones perfil-stats">
@@ -103,7 +117,7 @@ export function PerfilPage(): JSX.Element {
         </div>
       ) : null}
 
-      <div role="tablist" aria-label="Secciones de perfil" className="tabs">
+      <div role="tablist" aria-label="Secciones de perfil" className="tabs tabs--panel">
         <button
           type="button"
           role="tab"
@@ -124,73 +138,71 @@ export function PerfilPage(): JSX.Element {
         </button>
       </div>
 
-      {tab === 'cuenta' ? (
-        <div className="tarjeta">
-          <dl className="lista-datos">
-            <div className="lista-datos__fila">
-              <dt>Teléfono</dt>
-              <dd>{usuario.telefono ?? 'No registrado'}</dd>
-            </div>
-            <div className="lista-datos__fila">
-              <dt>Rol</dt>
-              <dd>{usuario.rol}</dd>
-            </div>
-            <div className="lista-datos__fila">
-              <dt>Miembro desde</dt>
-              <dd>{new Date(usuario.fechaCreacion).toLocaleDateString('es-EC')}</dd>
-            </div>
-          </dl>
+      <section className="perfil-panel">
+        {tab === 'cuenta' ? (
+          <div className="perfil-contenido">
+            <div className="tarjeta">
+              <h3>Información personal</h3>
+              <dl className="lista-datos">
+                <div className="lista-datos__fila">
+                  <dt>Teléfono</dt>
+                  <dd>{usuario.telefono ?? 'No registrado'}</dd>
+                </div>
+                <div className="lista-datos__fila">
+                  <dt>Miembro desde</dt>
+                  <dd>{new Date(usuario.fechaCreacion).toLocaleDateString('es-EC')}</dd>
+                </div>
+              </dl>
 
-          <p>
-            <Link to="/publicaciones/mias">📜 Mis publicaciones</Link>
-          </p>
-          {/* Acceso al panel de administración oculto de la nav principal (ADR-020) — solo visible aquí. */}
-          {usuario.rol === 'ADMINISTRADOR' ? (
-            <p>
-              <Link to="/admin">⚙️ Panel de administración</Link>
+              {/* Acceso al panel de administración oculto de la nav principal (ADR-020) — solo visible aquí. */}
+              {usuario.rol === 'ADMINISTRADOR' ? (
+                <Link to="/admin" className="perfil-enlace">
+                  Panel de administración
+                </Link>
+              ) : null}
+            </div>
+
+            {/* Opción D, Fase 3 (docs/DISENO_MODELO_PERFILES.md) — activar/desactivar perfiles propios. */}
+            <fieldset className="form-field form-field--opciones tarjeta">
+              <legend>Tus perfiles</legend>
+              <p className="perfil-seccion__ayuda">Selecciona cómo quieres participar en DonaConnect.</p>
+              {PERFILES.map((opcion) => (
+                <label key={opcion.valor} className="opcion-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={perfilesSeleccionados.includes(opcion.valor)}
+                    onChange={() => alternarPerfil(opcion.valor)}
+                  />
+                  {opcion.etiqueta}
+                </label>
+              ))}
+              <Button type="button" onClick={guardarPerfiles} disabled={actualizarPerfiles.isPending}>
+                {actualizarPerfiles.isPending ? 'Guardando…' : 'Guardar perfiles'}
+              </Button>
+            </fieldset>
+          </div>
+        ) : null}
+
+        {tab === 'ubicacion' ? (
+          // PATCH /usuarios/me/ubicacion (cierra el gap que documentaba este mismo comentario antes).
+          // Guardarla acá la deja disponible como "ubicación registrada" en los wizards de
+          // Donación/Solicitud, en vez de tener que cargarla de cero en cada publicación.
+          <div className="tarjeta perfil-ubicacion">
+            <h3>Ubicación guardada</h3>
+            <p className="perfil-seccion__ayuda">
+              Guárdala una vez para reutilizarla al publicar una donación o solicitud.
             </p>
-          ) : null}
-        </div>
-      ) : null}
-
-      {/* Opción D, Fase 3 (docs/DISENO_MODELO_PERFILES.md) — activar/desactivar perfiles propios. */}
-      {tab === 'cuenta' ? (
-        <fieldset className="form-field form-field--opciones tarjeta">
-          <legend>Tus perfiles (qué puedes hacer en DonaConnect)</legend>
-          {PERFILES.map((opcion) => (
-            <label key={opcion.valor} className="opcion-checkbox">
-              <input
-                type="checkbox"
-                checked={perfilesSeleccionados.includes(opcion.valor)}
-                onChange={() => alternarPerfil(opcion.valor)}
-              />
-              {opcion.etiqueta}
-            </label>
-          ))}
-          <Button type="button" onClick={guardarPerfiles} disabled={actualizarPerfiles.isPending}>
-            {actualizarPerfiles.isPending ? 'Guardando…' : 'Guardar perfiles'}
-          </Button>
-        </fieldset>
-      ) : null}
-
-      {tab === 'ubicacion' ? (
-        // PATCH /usuarios/me/ubicacion (cierra el gap que documentaba este mismo comentario antes).
-        // Guardarla acá la deja disponible como "ubicación registrada" en los wizards de
-        // Donación/Solicitud, en vez de tener que cargarla de cero en cada publicación.
-        <div className="tarjeta">
-          <p className="location-picker__ayuda">
-            Guardá tu ubicación una vez y elegí reusarla al publicar una donación o solicitud.
-          </p>
-          <LocationPicker value={ubicacion} onChange={setUbicacion} />
-          <Button
-            type="button"
-            onClick={guardarUbicacion}
-            disabled={actualizarUbicacion.isPending || !ubicacion.provincia || !ubicacion.ciudad}
-          >
-            {actualizarUbicacion.isPending ? 'Guardando…' : 'Guardar ubicación'}
-          </Button>
-        </div>
-      ) : null}
+            <LocationPicker value={ubicacion} onChange={setUbicacion} />
+            <Button
+              type="button"
+              onClick={guardarUbicacion}
+              disabled={actualizarUbicacion.isPending || !ubicacion.provincia || !ubicacion.ciudad}
+            >
+              {actualizarUbicacion.isPending ? 'Guardando…' : 'Guardar ubicación'}
+            </Button>
+          </div>
+        ) : null}
+      </section>
     </div>
   );
 }

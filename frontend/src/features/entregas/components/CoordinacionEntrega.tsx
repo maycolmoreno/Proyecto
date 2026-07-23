@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { StatusBadge } from '@shared/components/atoms/StatusBadge';
 import { Button } from '@shared/components/atoms/Button';
+import { IlustracionEntrega } from '@shared/components/illustrations/IlustracionEntrega';
 import { useToast } from '@shared/components/organisms/ToastProvider';
 import { useEntregaPorReferencia } from '../hooks/useEntregaPorReferencia.js';
 import { useActualizarEntrega } from '../hooks/useActualizarEntrega.js';
@@ -42,34 +43,39 @@ export function CoordinacionEntrega({ idReferencia, otroParticipanteId }: Coordi
 
   return (
     <div className="coordinacion-entrega">
-      <h2>Coordinación de entrega</h2>
-      <p>
-        Modalidad: {entrega.data.modalidad === 'RETIRO_DOMICILIO' ? 'Retiro a domicilio' : 'Entrega directa'} —{' '}
-        <StatusBadge estado={entrega.data.estado} />
-      </p>
-      {entrega.data.fechaProgramada ? (
-        <p>Programada para: {new Date(entrega.data.fechaProgramada).toLocaleString('es-EC')}</p>
-      ) : null}
-      {otroParticipanteId ? (
+      <div className="coordinacion-entrega__ilustracion">
+        <IlustracionEntrega />
+      </div>
+      <div className="coordinacion-entrega__contenido">
+        <h2>Coordinación de entrega</h2>
         <p>
-          <Link to={`/conversaciones/${otroParticipanteId}`}>💬 Coordinar por mensaje</Link>
+          Modalidad: {entrega.data.modalidad === 'RETIRO_DOMICILIO' ? 'Retiro a domicilio' : 'Entrega directa'} —{' '}
+          <StatusBadge estado={entrega.data.estado} />
         </p>
-      ) : null}
-      {!finalizada ? (
-        <>
-          <label>
-            Fecha y hora acordada (opcional)
-            <input
-              type="datetime-local"
-              value={fechaProgramada}
-              onChange={(e) => setFechaProgramada(e.target.value)}
-            />
-          </label>
-          <Button type="button" onClick={confirmar} disabled={actualizarEntrega.isPending}>
-            {actualizarEntrega.isPending ? 'Confirmando…' : 'Confirmar entrega'}
-          </Button>
-        </>
-      ) : null}
+        {entrega.data.fechaProgramada ? (
+          <p>Programada para: {new Date(entrega.data.fechaProgramada).toLocaleString('es-EC')}</p>
+        ) : null}
+        {otroParticipanteId ? (
+          <p>
+            <Link to={`/conversaciones/${otroParticipanteId}`}>💬 Coordinar por mensaje</Link>
+          </p>
+        ) : null}
+        {!finalizada ? (
+          <>
+            <label>
+              Fecha y hora acordada (opcional)
+              <input
+                type="datetime-local"
+                value={fechaProgramada}
+                onChange={(e) => setFechaProgramada(e.target.value)}
+              />
+            </label>
+            <Button type="button" onClick={confirmar} disabled={actualizarEntrega.isPending}>
+              {actualizarEntrega.isPending ? 'Confirmando…' : 'Confirmar entrega'}
+            </Button>
+          </>
+        ) : null}
+      </div>
     </div>
   );
 }

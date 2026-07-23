@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import { Icon } from '@shared/components/atoms/Icon';
 import type { NavItem } from '@shared/lib/nav-items';
 
 // Componente reutilizable (ADR-045): navegación lateral fija, desktop ≥1024px (Fase 5, sección 1).
@@ -16,7 +17,8 @@ export function Sidebar({ items }: SidebarProps): JSX.Element {
           end={item.ruta === '/'}
           className={({ isActive }) => `sidebar__item${isActive ? ' sidebar__item--activo' : ''}`}
         >
-          {item.icono} {item.etiqueta}
+          <Icon name={item.icono} className="nav-icon" />
+          <span>{item.etiqueta}</span>
         </NavLink>
       ))}
     </nav>

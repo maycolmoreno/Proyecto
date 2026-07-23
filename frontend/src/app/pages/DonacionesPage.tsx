@@ -37,10 +37,14 @@ export function DonacionesPage(): JSX.Element {
   return (
     <div>
       <div className="pagina-encabezado">
-        <h1>Donaciones</h1>
+        <div className="pagina-encabezado__texto">
+          <span className="pagina-encabezado__eyebrow">Comunidad solidaria</span>
+          <h1>Donaciones</h1>
+          <p>Encuentra objetos disponibles y dales una segunda vida.</p>
+        </div>
         {puedePublicar ? (
-          <Link to="/donaciones/nueva">
-            <Button type="button">+ Publicar</Button>
+          <Link to="/donaciones/nueva" className="btn btn--primario">
+            Publicar donación
           </Link>
         ) : null}
       </div>

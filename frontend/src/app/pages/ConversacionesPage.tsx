@@ -44,14 +44,35 @@ export function ConversacionesPage(): JSX.Element {
   const { id } = useParams<{ id?: string }>();
   const sesion = useSesion();
   const conversaciones = useConversaciones();
+  const totalConversaciones = conversaciones.data?.length ?? 0;
+  const totalNoLeidos =
+    conversaciones.data?.reduce(
+      (total, conversacion) => total + conversacion.mensajes.filter((m) => m.autorId !== sesion.data?.id && !m.leido).length,
+      0,
+    ) ?? 0;
 
   if (sesion.isLoading || !sesion.data) return <p className="estado-lista">Cargando…</p>;
 
   return (
-    <div>
-      <h1>Mensajes</h1>
+    <div className="conversaciones-pagina">
+      <div className="pagina-encabezado conversaciones-encabezado">
+        <div className="pagina-encabezado__texto">
+          <span className="pagina-encabezado__eyebrow">Centro de mensajes</span>
+          <h1>Conversaciones</h1>
+          <p>Coordina donaciones, solicitudes y trueques desde un solo lugar.</p>
+        </div>
+        <div className="conversaciones-resumen" aria-label="Resumen de mensajes">
+          <span>{totalConversaciones} chats</span>
+          <strong>{totalNoLeidos} sin leer</strong>
+        </div>
+      </div>
+
       <div className="conversaciones-layout">
-        <div className="conversaciones-lista">
+        <aside className="conversaciones-lista" aria-label="Conversaciones">
+          <div className="conversaciones-lista__encabezado">
+            <h2>Bandeja</h2>
+            <span>{totalConversaciones}</span>
+          </div>
           {conversaciones.isLoading ? <p className="estado-lista">Cargando…</p> : null}
           {conversaciones.data && conversaciones.data.length === 0 ? (
             <EstadoVacio
@@ -64,8 +85,8 @@ export function ConversacionesPage(): JSX.Element {
             const otroId = c.participantes.find((p) => p !== sesion.data!.id) ?? c.participantes[0];
             return <ConversacionListItem key={c.id} conversacion={c} miId={sesion.data!.id} activo={otroId === id} />;
           })}
-        </div>
-        <div className="conversaciones-hilo">
+        </aside>
+        <section className="conversaciones-hilo" aria-label="Mensajes">
           {id ? (
             <ConversationThread otroParticipanteId={id} />
           ) : (
@@ -76,7 +97,7 @@ export function ConversacionesPage(): JSX.Element {
               descripcion="Elige a alguien de la lista para ver los mensajes."
             />
           )}
-        </div>
+        </section>
       </div>
     </div>
   );

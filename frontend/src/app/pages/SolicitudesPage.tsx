@@ -3,14 +3,22 @@ import { Link } from 'react-router-dom';
 import { FiltroPanel } from '@shared/components/organisms/FiltroPanel';
 import { Button } from '@shared/components/atoms/Button';
 import { EstadoVacio } from '@shared/components/molecules/EstadoVacio';
-import { PROVINCIAS_ECUADOR } from '@shared/lib/ubicacion';
 import { useSesion } from '@features/identidad/hooks/useSesion';
 import { useCategorias } from '@features/categorias/hooks/useCategorias';
 import { useSolicitudes } from '@features/solicitudes/hooks/useSolicitudes';
+import { useMisPublicaciones } from '@features/publicaciones/hooks/useMisPublicaciones';
 import { OfertarRapido } from '@features/solicitudes/components/OfertarRapido';
 import { SolicitudCard } from '@features/solicitudes/components/SolicitudCard';
-import type { EstadoSolicitud, ListarSolicitudesFiltros } from '@features/solicitudes/types/index.js';
+import type { ListarSolicitudesFiltros } from '@features/solicitudes/types/index.js';
 import type { PerfilFuncional } from '@features/identidad/types/index.js';
+
+// Consejos para quien está evaluando ofrecer ayuda — mismo contenido de confianza/seguridad que
+// ya documenta ComoFuncionaPage, resumido acá como checklist rápido (pedido del usuario 2026-07-23).
+const CONSEJOS_DONAR = [
+  'Lee la descripción completa y verifica la ubicación.',
+  'Coordina siempre por mensajes dentro de la plataforma.',
+  'Tu seguridad y la de los demás es lo más importante.',
+];
 
 // Opción D, Fase 3 (docs/DISENO_MODELO_PERFILES.md) — antes ROLES_PUEDEN_PUBLICAR con rol.
 // COMUNIDAD removido (ADR-049).
@@ -18,35 +26,25 @@ const PERFILES_PUEDEN_PUBLICAR: PerfilFuncional[] = ['SOLICITANTE'];
 // Mismo criterio que SolicitudDetallePage.tsx (PERFILES_PUEDEN_OFERTAR) — repetido acá porque
 // la acción rápida vive en esta página, no en un componente compartido.
 const PERFILES_PUEDEN_OFERTAR: PerfilFuncional[] = ['DONANTE'];
-const OPCIONES_URGENCIA = [
-  { valor: 'ALTA', etiqueta: 'Alta' },
-  { valor: 'MEDIA', etiqueta: 'Media' },
-  { valor: 'BAJA', etiqueta: 'Baja' },
-];
-// Las 6 vigentes de EstadoSolicitud (backend/domain/solicitudes/value-objects/EstadoSolicitud.ts)
-// con etiqueta legible — el badge de la tarjeta muestra el valor crudo, pero para tabs de
-// navegación hace falta texto en español.
-const TABS_ESTADO: { valor: EstadoSolicitud; etiqueta: string }[] = [
-  { valor: 'ABIERTA', etiqueta: 'Abiertas' },
-  { valor: 'EN_REVISION', etiqueta: 'En revisión' },
-  { valor: 'ACEPTADA_POR_DONANTE', etiqueta: 'Aceptadas' },
-  { valor: 'EN_ENTREGA', etiqueta: 'En entrega' },
-  { valor: 'ATENDIDA', etiqueta: 'Atendidas' },
-  { valor: 'CANCELADA', etiqueta: 'Canceladas' },
-];
-const OPCIONES_PROVINCIA = PROVINCIAS_ECUADOR.map((p) => ({ valor: p, etiqueta: p }));
-const OPCIONES_ORDEN = [
-  { valor: 'fecha_desc', etiqueta: 'Más recientes' },
-  { valor: 'fecha_asc', etiqueta: 'Más antiguas' },
-];
 
 export function SolicitudesPage(): JSX.Element {
   const [filtros, setFiltros] = useState<ListarSolicitudesFiltros>({ page: 1, limit: 12 });
   const sesion = useSesion();
   const categorias = useCategorias();
   const solicitudes = useSolicitudes(filtros);
+  const misPublicaciones = useMisPublicaciones(Boolean(sesion.data));
 
   const puedePublicar = sesion.data && PERFILES_PUEDEN_PUBLICAR.some((p) => sesion.data.perfiles.includes(p));
+  // "Resumen" del sidebar — mis propias solicitudes, no las del listado general (mismos estados
+  // que uso en SolicitudDetallePage para consistencia).
+  const misSolicitudes = (misPublicaciones.data ?? []).filter((p) => p.tipo === 'SOLICITUD');
+  const resumenSolicitudes = {
+    total: misSolicitudes.length,
+    abiertas: misSolicitudes.filter((p) => p.estado === 'ABIERTA').length,
+    enCoordinacion: misSolicitudes.filter((p) => p.estado === 'ACEPTADA_POR_DONANTE' || p.estado === 'EN_ENTREGA').length,
+    atendidas: misSolicitudes.filter((p) => p.estado === 'ATENDIDA').length,
+    canceladas: misSolicitudes.filter((p) => p.estado === 'CANCELADA').length,
+  };
   const hayFiltrosActivos = Object.entries(filtros).some(
     ([campo, valor]) => campo !== 'page' && campo !== 'limit' && campo !== 'sort' && Boolean(valor),
   );
@@ -56,54 +54,47 @@ export function SolicitudesPage(): JSX.Element {
   }
 
   return (
-    <div>
+    <div className="listado-layout">
+      <div className="listado-layout__principal">
       <div className="pagina-encabezado">
-        <h1>Solicitudes</h1>
+        <div className="pagina-encabezado__texto">
+          <span className="pagina-encabezado__eyebrow">Ayuda cercana</span>
+          <h1>Solicitudes</h1>
+          <p>Conoce qué necesita la comunidad y cómo puedes ayudar.</p>
+        </div>
         {puedePublicar ? (
-          <Link to="/solicitudes/nueva">
-            <Button type="button">+ Publicar</Button>
+          <Link to="/solicitudes/nueva" className="btn btn--primario">
+            Publicar solicitud
           </Link>
         ) : null}
       </div>
 
-      {/* Tabs de estado — separadas del panel de filtros porque son la navegación principal del
-          listado (RF-016), no un filtro secundario como categoría/urgencia/ubicación. */}
-      <div className="chips" role="group" aria-label="Estado">
-        <button
-          type="button"
-          className={`chip ${!filtros.estado ? 'chip--activo' : ''}`}
-          onClick={() => cambiarFiltro('estado', '')}
-        >
-          Todas
-        </button>
-        {TABS_ESTADO.map((tab) => (
-          <button
-            key={tab.valor}
-            type="button"
-            className={`chip ${filtros.estado === tab.valor ? 'chip--activo' : ''}`}
-            onClick={() => cambiarFiltro('estado', tab.valor)}
-          >
-            {tab.etiqueta}
-          </button>
-        ))}
-      </div>
+      <section className="solicitudes-filtros" aria-labelledby="titulo-filtros">
+        <div className="solicitudes-filtros__encabezado">
+          <div>
+            <h2 id="titulo-filtros">Encuentra dónde ayudar</h2>
+            <p>Filtra las solicitudes por categoría.</p>
+          </div>
+          {hayFiltrosActivos ? (
+            <button type="button" className="solicitudes-filtros__limpiar" onClick={() => setFiltros({ page: 1, limit: 12 })}>
+              Limpiar filtros
+            </button>
+          ) : null}
+        </div>
 
-      <FiltroPanel
-        definiciones={[
-          {
-            campo: 'categoriaId',
-            etiqueta: 'Categoría',
-            opciones: (categorias.data ?? []).map((c) => ({ valor: c.id, etiqueta: c.nombre })),
-            variante: 'chips',
-          },
-          { campo: 'urgencia', etiqueta: 'Urgencia', opciones: OPCIONES_URGENCIA },
-          { campo: 'provincia', etiqueta: 'Provincia', opciones: OPCIONES_PROVINCIA },
-          { campo: 'ciudad', etiqueta: 'Ciudad', variante: 'texto' },
-          { campo: 'sort', etiqueta: 'Ordenar por', opciones: OPCIONES_ORDEN },
-        ]}
-        valores={filtros as Record<string, string>}
-        onCambiar={cambiarFiltro}
-      />
+        <FiltroPanel
+          definiciones={[
+            {
+              campo: 'categoriaId',
+              etiqueta: 'Categoría',
+              opciones: (categorias.data ?? []).map((c) => ({ valor: c.id, etiqueta: c.nombre })),
+              variante: 'chips',
+            },
+          ]}
+          valores={filtros as Record<string, string>}
+          onCambiar={cambiarFiltro}
+        />
+      </section>
 
       {solicitudes.isLoading ? <p className="estado-lista">Cargando…</p> : null}
       {solicitudes.isError ? <p className="estado-lista">No se pudieron cargar las solicitudes.</p> : null}
@@ -112,7 +103,7 @@ export function SolicitudesPage(): JSX.Element {
           <EstadoVacio
             icono="🔍"
             titulo="Ninguna solicitud coincide con estos filtros"
-            descripcion="Prueba con otra categoría, urgencia o ubicación."
+            descripcion="Prueba con otra categoría."
             accion={{ texto: 'Limpiar filtros', onClick: () => setFiltros({ page: 1, limit: 12 }) }}
           />
         ) : (
@@ -167,6 +158,54 @@ export function SolicitudesPage(): JSX.Element {
           </div>
         </>
       ) : null}
+      </div>
+
+      <aside className="listado-layout__sidebar">
+        {sesion.data ? (
+          <div className="tarjeta">
+            <h3>Resumen</h3>
+            <dl className="lista-datos">
+              <div className="lista-datos__fila">
+                <dt>Total solicitudes</dt>
+                <dd>{resumenSolicitudes.total}</dd>
+              </div>
+              <div className="lista-datos__fila">
+                <dt>🙏 Abiertas</dt>
+                <dd>{resumenSolicitudes.abiertas}</dd>
+              </div>
+              <div className="lista-datos__fila">
+                <dt>🚚 En coordinación</dt>
+                <dd>{resumenSolicitudes.enCoordinacion}</dd>
+              </div>
+              <div className="lista-datos__fila">
+                <dt>💚 Atendidas</dt>
+                <dd>{resumenSolicitudes.atendidas}</dd>
+              </div>
+              <div className="lista-datos__fila">
+                <dt>❌ Canceladas</dt>
+                <dd>{resumenSolicitudes.canceladas}</dd>
+              </div>
+            </dl>
+            <Link to="/publicaciones/mias" className="tarjeta__enlace">
+              Ver mis solicitudes →
+            </Link>
+          </div>
+        ) : null}
+
+        <div className="tarjeta">
+          <h3>Consejos para donar</h3>
+          <ul className="consejos-lista">
+            {CONSEJOS_DONAR.map((consejo) => (
+              <li key={consejo}>
+                <span aria-hidden="true">✅</span> {consejo}
+              </li>
+            ))}
+          </ul>
+          <Link to="/como-funciona" className="tarjeta__enlace">
+            Ver más consejos →
+          </Link>
+        </div>
+      </aside>
     </div>
   );
 }

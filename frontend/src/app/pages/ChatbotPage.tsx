@@ -36,9 +36,16 @@ export function ChatbotPage(): JSX.Element {
   }
 
   return (
-    <div>
-      <h1>Asistente DonaConnect</h1>
-      <div className="chat-widget__mensajes chat-widget__mensajes--pagina">
+    <div className="asistente-pagina">
+      <div className="pagina-encabezado">
+        <div className="pagina-encabezado__texto">
+          <span className="pagina-encabezado__eyebrow">Ayuda inmediata</span>
+          <h1>Asistente DonaConnect</h1>
+          <p>Resuelve dudas sobre donaciones, solicitudes y trueques.</p>
+        </div>
+      </div>
+      <section className="asistente-panel" aria-label="Conversación con el asistente">
+        <div className="chat-widget__mensajes chat-widget__mensajes--pagina">
         {chatbot.cargandoHistorial ? <p className="estado-lista">Cargando…</p> : null}
         {chatbot.mensajes.length === 0 && !chatbot.cargandoHistorial && !pendiente ? (
           <div className="chat-widget__bienvenida">
@@ -64,20 +71,22 @@ export function ChatbotPage(): JSX.Element {
         ))}
         {pendiente ? <p className="chat-widget__mensaje chat-widget__mensaje--usuario">{pendiente}</p> : null}
         {chatbot.enviando ? <p className="chat-widget__mensaje chat-widget__mensaje--bot">Escribiendo…</p> : null}
-      </div>
-      <div className="chat-widget__entrada">
-        <input
-          type="text"
-          value={texto}
-          onChange={(e) => setTexto(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && enviar()}
-          placeholder="Escribe tu pregunta…"
-          disabled={chatbot.enviando}
-        />
-        <Button type="button" onClick={() => enviar()} disabled={chatbot.enviando || !texto.trim()}>
-          Enviar
-        </Button>
-      </div>
+        </div>
+        <div className="chat-widget__entrada">
+          <input
+            type="text"
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && enviar()}
+            placeholder="Escribe tu pregunta…"
+            aria-label="Mensaje para el asistente"
+            disabled={chatbot.enviando}
+          />
+          <Button type="button" onClick={() => enviar()} disabled={chatbot.enviando || !texto.trim()}>
+            Enviar
+          </Button>
+        </div>
+      </section>
     </div>
   );
 }

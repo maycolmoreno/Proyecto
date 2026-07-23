@@ -39,10 +39,13 @@ export function ConversationThread({ otroParticipanteId }: ConversationThreadPro
   const ahoraISO = new Date().toISOString();
 
   return (
-    <div>
+    <div className="conversacion-hilo">
       <div className="conversacion-hilo__encabezado">
         <Avatar nombre={nombreOtro} />
-        <h2>{nombreOtro}</h2>
+        <div>
+          <h2>{nombreOtro}</h2>
+          <p>Conversación privada</p>
+        </div>
       </div>
       <div className="chat-widget__mensajes chat-widget__mensajes--pagina">
         {conversacion.isLoading ? <p className="estado-lista">Cargando…</p> : null}
@@ -91,7 +94,7 @@ export function ConversationThread({ otroParticipanteId }: ConversationThreadPro
           disabled={enviarMensaje.isPending}
         />
         <Button type="button" onClick={enviar} disabled={enviarMensaje.isPending || !texto.trim()}>
-          Enviar
+          Enviar mensaje
         </Button>
       </div>
     </div>

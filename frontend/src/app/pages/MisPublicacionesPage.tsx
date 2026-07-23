@@ -24,7 +24,11 @@ export function MisPublicacionesPage(): JSX.Element {
   return (
     <div>
       <div className="pagina-encabezado">
-        <h1>Mis publicaciones</h1>
+        <div className="pagina-encabezado__texto">
+          <span className="pagina-encabezado__eyebrow">Tu actividad</span>
+          <h1>Mis publicaciones</h1>
+          <p>Consulta el estado de todo lo que has compartido con la comunidad.</p>
+        </div>
       </div>
       <p className="aviso-info">
         El estado mostrado puede no reflejar cambios muy recientes — para el estado más actualizado, entra al detalle de

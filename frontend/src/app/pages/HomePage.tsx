@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useSesion } from '@features/identidad/hooks/useSesion';
 import { useDashboard } from '@features/dashboard/hooks/useDashboard';
 import { DashboardStatTile } from '@features/dashboard/components/DashboardStatTile';
-import { Button } from '@shared/components/atoms/Button';
+import { Icon } from '@shared/components/atoms/Icon';
 import { useDonaciones } from '@features/donaciones/hooks/useDonaciones';
 import { DonacionCard } from '@features/donaciones/components/DonacionCard';
 
@@ -31,13 +31,11 @@ export function HomePage(): JSX.Element {
             DonaConnect conecta a quienes tienen objetos que ya no usan con quienes los necesitan — sin dinero de por medio.
           </p>
           <div className="hero__acciones">
-            <Link to="/registro">
-              <Button type="button">Crear cuenta</Button>
+            <Link to="/registro" className="btn btn--primario">
+              Crear cuenta
             </Link>
-            <Link to="/donaciones">
-              <Button type="button" variant="secundario">
-                Explorar donaciones
-              </Button>
+            <Link to="/donaciones" className="btn btn--secundario">
+              Explorar donaciones
             </Link>
           </div>
           <Link to="/como-funciona" className="hero__link-secundario">
@@ -70,10 +68,9 @@ export function HomePage(): JSX.Element {
           <h1>Bienvenido, {sesion.data.nombre}</h1>
           <p className="inicio-saludo__subtitulo">Este es el impacto que la comunidad ha generado hasta hoy.</p>
         </div>
-        <Link to="/publicaciones/mias">
-          <Button type="button" variant="secundario">
-            📜 Mis publicaciones
-          </Button>
+        <Link to="/publicaciones/mias" className="btn btn--secundario">
+          <Icon name="file" className="nav-icon" />
+          Mis publicaciones
         </Link>
       </div>
 

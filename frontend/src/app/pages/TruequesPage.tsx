@@ -38,10 +38,14 @@ export function TruequesPage(): JSX.Element {
   return (
     <div>
       <div className="pagina-encabezado">
-        <h1>Trueques</h1>
+        <div className="pagina-encabezado__texto">
+          <span className="pagina-encabezado__eyebrow">Intercambio responsable</span>
+          <h1>Trueques</h1>
+          <p>Intercambia lo que ya no usas por algo que sí necesitas.</p>
+        </div>
         {puedePublicar ? (
-          <Link to="/trueques/nuevo">
-            <Button type="button">+ Publicar</Button>
+          <Link to="/trueques/nuevo" className="btn btn--primario">
+            Publicar trueque
           </Link>
         ) : null}
       </div>

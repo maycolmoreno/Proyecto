@@ -3,13 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { Stepper } from '@shared/components/molecules/Stepper';
+import { EstadoObjetoSelector } from '@shared/components/molecules/EstadoObjetoSelector';
 import { Input } from '@shared/components/atoms/Input';
 import { TextArea } from '@shared/components/atoms/TextArea';
 import { Select } from '@shared/components/atoms/Select';
 import { Button } from '@shared/components/atoms/Button';
+import { Modal } from '@shared/components/organisms/Modal';
 import { IASuggestionBox } from '@shared/components/molecules/IASuggestionBox';
 import { subirACloudinary } from '@shared/lib/cloudinary';
 import { useToast } from '@shared/components/organisms/ToastProvider';
+import { etiquetaEstadoObjeto } from '@shared/lib/estado-color';
 import { useCategorias } from '@features/categorias/hooks/useCategorias';
 import { useClasificar } from '@features/ia/hooks/useClasificar';
 import { useCrearTrueque } from '../hooks/useCrearTrueque.js';
@@ -33,6 +36,20 @@ const ESTADOS_OBJETO: { valor: EstadoObjeto; etiqueta: string }[] = [
   { valor: 'BUEN_ESTADO', etiqueta: 'Buen estado' },
   { valor: 'USADO', etiqueta: 'Usado' },
   { valor: 'REQUIERE_REPARACION', etiqueta: 'Requiere reparación' },
+];
+const LIMITE_DESCRIPCION = 500;
+
+// Rediseño visual (2026-07-23, mismo tratamiento que SolicitudWizard 2026-07-22). El ORDEN y
+// CONTENIDO de los 5 pasos no cambia (categoría+título → descripción+estado → fotos → qué buscas a
+// cambio → revisión); solo se renombran para el nuevo stepper/tarjeta.
+const ETIQUETAS_STEPPER = ['Categoría', 'Descripción y estado', 'Fotos', 'A cambio', 'Revisión'];
+const TITULOS_PASO = ['Categoría y título', 'Descripción y estado', 'Fotos', '¿Qué buscas a cambio?', 'Revisión'];
+const AYUDA_PASO = [
+  'Elige la categoría que mejor describe tu objeto y dale un título claro.',
+  'Cuéntanos más sobre el objeto y en qué estado se encuentra.',
+  'Las publicaciones con foto se notan más en el listado.',
+  'Cuanto más específico seas, mejor podremos sugerirte trueques que coincidan.',
+  'Revisa los datos antes de publicar tu trueque.',
 ];
 
 // Desliza el contenido del paso en la dirección en que se navega (Siguiente/Atrás) — la dirección
@@ -60,6 +77,7 @@ export function TruequeWizard(): JSX.Element {
     prioridadSugerida: string | null;
   } | null>(null);
   const [sugerenciaAplicada, setSugerenciaAplicada] = useState(false);
+  const [vistaPreviaAbierta, setVistaPreviaAbierta] = useState(false);
 
   const categorias = useCategorias();
   const crearTrueque = useCrearTrueque();
@@ -71,6 +89,8 @@ export function TruequeWizard(): JSX.Element {
   // Se dispara ni bien hay id (mismo query que MatchesSugeridos, TanStack Query la deduplica) —
   // se usa acá solo para controlar los mensajes de carga/vacío/error del paso de resultado.
   const matches = useMatches('TRUEQUE', truequePublicado?.id);
+
+  const categoriaSeleccionada = (categorias.data ?? []).find((c) => c.id === categoriaId);
 
   async function sugerirConIA(): Promise<void> {
     try {
@@ -147,8 +167,6 @@ export function TruequeWizard(): JSX.Element {
     setTruequePublicado(trueque);
   }
 
-  const etiquetasPaso = ['Categoría y título', 'Descripción y estado', 'Fotos', '¿Qué buscas a cambio?', 'Revisión'];
-
   // Validación por paso — mismo bug real evitado que en DonacionWizard/SolicitudWizard: el wizard no
   // usa <form onSubmit>, así que hay que bloquear el avance explícitamente en JS.
   const puedeAvanzar =
@@ -160,13 +178,13 @@ export function TruequeWizard(): JSX.Element {
   if (truequePublicado) {
     return (
       <motion.div
-        className="wizard"
+        className="wizard-card"
         initial={prefiereReducirMovimiento ? false : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
       >
         <h2>¡Trueque publicado con éxito!</h2>
-        <p>Buscamos otros trueques publicados que podrían interesarte para intercambiar.</p>
+        <p className="wizard-card__ayuda">Buscamos otros trueques publicados que podrían interesarte para intercambiar.</p>
         {matches.isLoading ? <p className="estado-lista">Buscando coincidencias…</p> : null}
         {matches.isError ? (
           <p className="estado-lista">No se pudieron cargar las coincidencias sugeridas. Podés verlas más tarde desde tu trueque.</p>
@@ -175,7 +193,7 @@ export function TruequeWizard(): JSX.Element {
           <p className="estado-lista">Por ahora no encontramos coincidencias. Te avisaremos si aparece alguna.</p>
         ) : null}
         <MatchesSugeridos entidadTipo="TRUEQUE" entidadId={truequePublicado.id} />
-        <div className="wizard__acciones">
+        <div className="wizard-card__acciones">
           <Button type="button" onClick={() => navigate(`/trueques/${truequePublicado.id}`)}>
             Ver mi trueque
           </Button>
@@ -185,124 +203,215 @@ export function TruequeWizard(): JSX.Element {
   }
 
   return (
-    <div className="wizard">
-      <Stepper pasoActual={paso} totalPasos={TOTAL_PASOS} etiqueta={etiquetasPaso[paso - 1]!} />
+    <>
+      <Stepper pasoActual={paso} totalPasos={TOTAL_PASOS} etiquetas={ETIQUETAS_STEPPER} />
 
-      <AnimatePresence mode="wait" custom={direccion} initial={false}>
-      <motion.div
-        key={paso}
-        custom={direccion}
-        variants={VARIANTES_PASO}
-        initial="entra"
-        animate="centro"
-        exit="sale"
-        transition={{ duration: prefiereReducirMovimiento ? 0 : 0.22, ease: 'easeOut' }}
-      >
-      {paso === 1 ? (
-        <>
-          <Select
-            label="Categoría"
-            name="categoriaId"
-            value={categoriaId}
-            onChange={(e) => setCategoriaId(e.target.value)}
-            opciones={(categorias.data ?? []).map((c) => ({ valor: c.id, etiqueta: c.nombre }))}
-            placeholder={categorias.isLoading ? 'Cargando categorías…' : 'Selecciona una categoría'}
-            required
-          />
-          <Input label="Título" name="titulo" value={titulo} onChange={(e) => setTitulo(e.target.value)} required />
-        </>
-      ) : null}
+      <div className="wizard-layout">
+        <div className="wizard-layout__principal">
+          <AnimatePresence mode="wait" custom={direccion} initial={false}>
+            <motion.div
+              key={paso}
+              custom={direccion}
+              variants={VARIANTES_PASO}
+              initial="entra"
+              animate="centro"
+              exit="sale"
+              transition={{ duration: prefiereReducirMovimiento ? 0 : 0.22, ease: 'easeOut' }}
+              className="wizard-card"
+            >
+              <div className="wizard-card__encabezado">
+                <h2>{TITULOS_PASO[paso - 1]}</h2>
+                <p className="wizard-card__ayuda">{AYUDA_PASO[paso - 1]}</p>
+              </div>
 
-      {paso === 2 ? (
-        <>
-          <TextArea
-            label="Descripción"
-            name="descripcion"
-            value={descripcion}
-            onChange={(e) => setDescripcion(e.target.value)}
-            required
-          />
-          <Select
-            label="Estado del objeto"
-            name="estadoObjeto"
-            value={estadoObjeto}
-            onChange={(e) => setEstadoObjeto(e.target.value as EstadoObjeto)}
-            opciones={ESTADOS_OBJETO}
-            required
-          />
-        </>
-      ) : null}
+              {paso === 1 ? (
+                <>
+                  <Select
+                    label="Categoría"
+                    name="categoriaId"
+                    value={categoriaId}
+                    onChange={(e) => setCategoriaId(e.target.value)}
+                    opciones={(categorias.data ?? []).map((c) => ({ valor: c.id, etiqueta: c.nombre }))}
+                    placeholder={categorias.isLoading ? 'Cargando categorías…' : 'Selecciona una categoría'}
+                    required
+                  />
+                  <Input label="Título" name="titulo" value={titulo} onChange={(e) => setTitulo(e.target.value)} required />
+                </>
+              ) : null}
 
-      {paso === 3 ? (
-        <div>
-          <p>Agrega fotos del objeto (se suben al publicar).</p>
-          <p className="aviso-info">Las publicaciones con foto se notan más en el listado — agrega al menos una si puedes.</p>
-          <div className="image-uploader__grid">
-            {archivos.map((archivo, i) => (
-              <img
-                key={`${archivo.name}-${i}`}
-                src={URL.createObjectURL(archivo)}
-                alt=""
-                className="image-uploader__miniatura"
-              />
-            ))}
+              {paso === 2 ? (
+                <>
+                  <div className="campo-descripcion">
+                    <TextArea
+                      label="Descripción"
+                      name="descripcion"
+                      placeholder="Describe el objeto, su estado y cualquier detalle relevante…"
+                      value={descripcion}
+                      onChange={(e) => setDescripcion(e.target.value.slice(0, LIMITE_DESCRIPCION))}
+                      maxLength={LIMITE_DESCRIPCION}
+                      required
+                    />
+                    <span className="campo-descripcion__contador">
+                      {descripcion.length} / {LIMITE_DESCRIPCION}
+                    </span>
+                  </div>
+
+                  <EstadoObjetoSelector value={estadoObjeto} onChange={(v) => setEstadoObjeto(v as EstadoObjeto)} />
+
+                  <div className="franja-tip">
+                    <p className="franja-tip__titulo">
+                      <span aria-hidden="true">💡</span> Sé claro y específico
+                    </p>
+                    <p className="franja-tip__texto">
+                      Una buena descripción ayuda a que las personas entiendan mejor lo que ofreces y propongan un intercambio.
+                    </p>
+                  </div>
+                </>
+              ) : null}
+
+              {paso === 3 ? (
+                <div className="wizard-fotos">
+                  <p className="aviso-info">Las publicaciones con foto se notan más en el listado — agrega al menos una si puedes.</p>
+                  {archivos.length > 0 ? (
+                    <div className="image-uploader__grid">
+                      {archivos.map((archivo, i) => (
+                        <img
+                          key={`${archivo.name}-${i}`}
+                          src={URL.createObjectURL(archivo)}
+                          alt=""
+                          className="image-uploader__miniatura"
+                        />
+                      ))}
+                    </div>
+                  ) : null}
+                  <input
+                    className="wizard-fotos__input"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    multiple
+                    onChange={agregarArchivos}
+                  />
+                </div>
+              ) : null}
+
+              {paso === 4 ? (
+                <div>
+                  <p className="aviso-info">
+                    Cuanto más específico seas, mejor podremos sugerirte trueques que coincidan (ej. "ropa de niño talla 6" en
+                    vez de "ropa"). Este texto se agrega a la descripción de tu publicación.
+                  </p>
+                  <TextArea
+                    label="¿Qué buscas a cambio? (opcional)"
+                    name="queBuscas"
+                    placeholder="Ej: busco herramientas de jardinería o algo similar…"
+                    value={queBuscas}
+                    onChange={(e) => setQueBuscas(e.target.value)}
+                  />
+                </div>
+              ) : null}
+
+              {paso === 5 ? (
+                <div className="wizard-revision">
+                  <p>
+                    <strong>{titulo}</strong>
+                  </p>
+                  <p>{descripcion}</p>
+                  <p>Estado: {ESTADOS_OBJETO.find((e) => e.valor === estadoObjeto)?.etiqueta}</p>
+                  <p>Fotos: {archivos.length}</p>
+                  {queBuscas.trim() ? <p>Busca a cambio: {queBuscas}</p> : null}
+                  <IASuggestionBox
+                    sugerencia={sugerencia}
+                    cargando={clasificar.isPending}
+                    aplicada={sugerenciaAplicada}
+                    onSugerir={sugerirConIA}
+                    onAplicar={aplicarSugerencia}
+                  />
+                </div>
+              ) : null}
+
+              <div className="wizard-card__acciones">
+                <Button type="button" variant="secundario" onClick={atras} disabled={paso === 1}>
+                  Atrás
+                </Button>
+                {paso < TOTAL_PASOS ? (
+                  <Button type="button" onClick={siguiente} disabled={!puedeAvanzar}>
+                    Guardar y continuar <span aria-hidden="true">→</span>
+                  </Button>
+                ) : (
+                  <Button type="button" onClick={publicar} disabled={publicando || !puedeAvanzar}>
+                    {publicando ? 'Publicando…' : 'Publicar trueque'}
+                  </Button>
+                )}
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        <aside className="wizard-layout__sidebar">
+          <div className="tarjeta">
+            <h3>Resumen de tu trueque</h3>
+            <dl className="lista-datos">
+              <div className="lista-datos__fila">
+                <dt>Categoría</dt>
+                <dd>{categoriaSeleccionada ? categoriaSeleccionada.nombre : 'Pendiente'}</dd>
+              </div>
+              <div className="lista-datos__fila">
+                <dt>Título</dt>
+                <dd>{titulo || 'Pendiente'}</dd>
+              </div>
+              <div className="lista-datos__fila">
+                <dt>Estado</dt>
+                <dd>{etiquetaEstadoObjeto(estadoObjeto)}</dd>
+              </div>
+              <div className="lista-datos__fila">
+                <dt>Fotos</dt>
+                <dd>{archivos.length > 0 ? `${archivos.length} agregada${archivos.length > 1 ? 's' : ''}` : 'Pendiente'}</dd>
+              </div>
+              <div className="lista-datos__fila">
+                <dt>A cambio</dt>
+                <dd>{queBuscas.trim() ? queBuscas : 'Pendiente'}</dd>
+              </div>
+            </dl>
+            <Button type="button" variant="secundario" onClick={() => setVistaPreviaAbierta(true)} disabled={!titulo}>
+              Vista previa
+            </Button>
           </div>
-          <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={agregarArchivos} />
-        </div>
-      ) : null}
 
-      {paso === 4 ? (
-        <div>
-          <p className="aviso-info">
-            Cuanto más específico seas, mejor podremos sugerirte trueques que coincidan (ej. "ropa de niño talla 6" en
-            vez de "ropa"). Este texto se agrega a la descripción de tu publicación.
-          </p>
-          <TextArea
-            label="¿Qué buscas a cambio? (opcional)"
-            name="queBuscas"
-            placeholder="Ej: busco herramientas de jardinería o algo similar…"
-            value={queBuscas}
-            onChange={(e) => setQueBuscas(e.target.value)}
-          />
-        </div>
-      ) : null}
-
-      {paso === 5 ? (
-        <div>
-          <h2>Revisión</h2>
-          <p>
-            <strong>{titulo}</strong>
-          </p>
-          <p>{descripcion}</p>
-          <p>Estado: {ESTADOS_OBJETO.find((e) => e.valor === estadoObjeto)?.etiqueta}</p>
-          <p>Fotos: {archivos.length}</p>
-          {queBuscas.trim() ? <p>Busca a cambio: {queBuscas}</p> : null}
-          <IASuggestionBox
-            sugerencia={sugerencia}
-            cargando={clasificar.isPending}
-            aplicada={sugerenciaAplicada}
-            onSugerir={sugerirConIA}
-            onAplicar={aplicarSugerencia}
-          />
-        </div>
-      ) : null}
-      </motion.div>
-      </AnimatePresence>
-
-      <div className="wizard__acciones">
-        <Button type="button" variant="secundario" onClick={atras} disabled={paso === 1}>
-          Atrás
-        </Button>
-        {paso < TOTAL_PASOS ? (
-          <Button type="button" onClick={siguiente} disabled={!puedeAvanzar}>
-            Siguiente
-          </Button>
-        ) : (
-          <Button type="button" onClick={publicar} disabled={publicando || !puedeAvanzar}>
-            {publicando ? 'Publicando…' : 'Publicar'}
-          </Button>
-        )}
+          <div className="tarjeta">
+            <h3>Consejos para una mejor publicación</h3>
+            <ul className="consejos-lista">
+              <li>
+                <span aria-hidden="true">📝</span> Describe el estado del objeto con claridad.
+              </li>
+              <li>
+                <span aria-hidden="true">🔁</span> Sé específico sobre qué buscas a cambio.
+              </li>
+              <li>
+                <span aria-hidden="true">🔒</span> Evita compartir datos personales o información sensible.
+              </li>
+              <li>
+                <span aria-hidden="true">📷</span> Agrega fotografías claras en el paso de fotos.
+              </li>
+            </ul>
+          </div>
+        </aside>
       </div>
-    </div>
+
+      {vistaPreviaAbierta ? (
+        <Modal titulo="Vista previa de tu trueque" onCerrar={() => setVistaPreviaAbierta(false)}>
+          <div className="vista-previa">
+            {archivos.length > 0 ? (
+              <img src={URL.createObjectURL(archivos[0]!)} alt="" className="image-uploader__miniatura" />
+            ) : null}
+            <p className="vista-previa__titulo">{titulo || 'Sin título'}</p>
+            <p className="vista-previa__descripcion">{descripcion || 'Sin descripción todavía.'}</p>
+            <div className="vista-previa__badges">
+              <span className="badge badge--neutral">{etiquetaEstadoObjeto(estadoObjeto)}</span>
+              {categoriaSeleccionada ? <span className="badge badge--tipo">{categoriaSeleccionada.nombre}</span> : null}
+            </div>
+          </div>
+        </Modal>
+      ) : null}
+    </>
   );
 }

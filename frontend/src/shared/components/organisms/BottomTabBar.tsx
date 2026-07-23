@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
+import { Icon } from '@shared/components/atoms/Icon';
 import type { NavItem } from '@shared/lib/nav-items';
 
 // Componente reutilizable (ADR-045): navegación inferior, mobile <768px (Fase 5, sección 1).
@@ -26,7 +27,8 @@ export function BottomTabBar({ items, itemsMas }: BottomTabBarProps): JSX.Elemen
                   className="sidebar__item"
                   onClick={() => setMasAbierto(false)}
                 >
-                  {item.icono} {item.etiqueta}
+                  <Icon name={item.icono} className="nav-icon" />
+                  <span>{item.etiqueta}</span>
                 </NavLink>
               ))}
             </nav>
@@ -41,7 +43,7 @@ export function BottomTabBar({ items, itemsMas }: BottomTabBarProps): JSX.Elemen
             end={item.ruta === '/'}
             className={({ isActive }) => `bottom-tab-bar__item${isActive ? ' bottom-tab-bar__item--activo' : ''}`}
           >
-            <span aria-hidden="true">{item.icono}</span>
+            <Icon name={item.icono} className="nav-icon" />
             {item.etiqueta}
           </NavLink>
         ))}
@@ -51,7 +53,7 @@ export function BottomTabBar({ items, itemsMas }: BottomTabBarProps): JSX.Elemen
           onClick={() => setMasAbierto(true)}
           aria-haspopup="dialog"
         >
-          <span aria-hidden="true">☰</span>
+          <Icon name="menu" className="nav-icon" />
           Más
         </button>
       </nav>

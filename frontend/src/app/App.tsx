@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ToastProvider } from '@shared/components/organisms/ToastProvider';
 import { AppShell } from './layouts/AppShell.js';
@@ -5,22 +6,23 @@ import { RutaProtegida } from './layouts/RutaProtegida.js';
 import { HomePage } from './pages/HomePage.js';
 import { LoginPage } from './pages/LoginPage.js';
 import { RegistroPage } from './pages/RegistroPage.js';
-import { PerfilPage } from './pages/PerfilPage.js';
-import { MisPublicacionesPage } from './pages/MisPublicacionesPage.js';
-import { DonacionesPage } from './pages/DonacionesPage.js';
-import { DonacionDetallePage } from './pages/DonacionDetallePage.js';
-import { NuevaDonacionPage } from './pages/NuevaDonacionPage.js';
-import { SolicitudesPage } from './pages/SolicitudesPage.js';
-import { SolicitudDetallePage } from './pages/SolicitudDetallePage.js';
-import { NuevaSolicitudPage } from './pages/NuevaSolicitudPage.js';
-import { TruequesPage } from './pages/TruequesPage.js';
-import { TruequeDetallePage } from './pages/TruequeDetallePage.js';
-import { NuevaTruequePage } from './pages/NuevaTruequePage.js';
-import { ChatbotPage } from './pages/ChatbotPage.js';
-import { AdminPage } from './pages/AdminPage.js';
-import { ConversacionesPage } from './pages/ConversacionesPage.js';
-import { MapaPage } from './pages/MapaPage.js';
-import { ComoFuncionaPage } from './pages/ComoFuncionaPage.js';
+
+const PerfilPage = lazy(() => import('./pages/PerfilPage.js').then((m) => ({ default: m.PerfilPage })));
+const MisPublicacionesPage = lazy(() => import('./pages/MisPublicacionesPage.js').then((m) => ({ default: m.MisPublicacionesPage })));
+const DonacionesPage = lazy(() => import('./pages/DonacionesPage.js').then((m) => ({ default: m.DonacionesPage })));
+const DonacionDetallePage = lazy(() => import('./pages/DonacionDetallePage.js').then((m) => ({ default: m.DonacionDetallePage })));
+const NuevaDonacionPage = lazy(() => import('./pages/NuevaDonacionPage.js').then((m) => ({ default: m.NuevaDonacionPage })));
+const SolicitudesPage = lazy(() => import('./pages/SolicitudesPage.js').then((m) => ({ default: m.SolicitudesPage })));
+const SolicitudDetallePage = lazy(() => import('./pages/SolicitudDetallePage.js').then((m) => ({ default: m.SolicitudDetallePage })));
+const NuevaSolicitudPage = lazy(() => import('./pages/NuevaSolicitudPage.js').then((m) => ({ default: m.NuevaSolicitudPage })));
+const TruequesPage = lazy(() => import('./pages/TruequesPage.js').then((m) => ({ default: m.TruequesPage })));
+const TruequeDetallePage = lazy(() => import('./pages/TruequeDetallePage.js').then((m) => ({ default: m.TruequeDetallePage })));
+const NuevaTruequePage = lazy(() => import('./pages/NuevaTruequePage.js').then((m) => ({ default: m.NuevaTruequePage })));
+const ChatbotPage = lazy(() => import('./pages/ChatbotPage.js').then((m) => ({ default: m.ChatbotPage })));
+const AdminPage = lazy(() => import('./pages/AdminPage.js').then((m) => ({ default: m.AdminPage })));
+const ConversacionesPage = lazy(() => import('./pages/ConversacionesPage.js').then((m) => ({ default: m.ConversacionesPage })));
+const MapaPage = lazy(() => import('./pages/MapaPage.js').then((m) => ({ default: m.MapaPage })));
+const ComoFuncionaPage = lazy(() => import('./pages/ComoFuncionaPage.js').then((m) => ({ default: m.ComoFuncionaPage })));
 
 // Routing + layout shell (Fase 1, sección 9.1). Login/Registro quedan fuera de AppShell (sin
 // Navbar/Sidebar de navegación completa). Chatbot/Mensajes/Perfil/Admin exigen sesión
@@ -29,7 +31,8 @@ export function App(): JSX.Element {
   return (
     <ToastProvider>
       <BrowserRouter>
-        <Routes>
+        <Suspense fallback={<p className="estado-lista">Cargando página…</p>}>
+          <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/registro" element={<RegistroPage />} />
 
@@ -58,7 +61,8 @@ export function App(): JSX.Element {
               <Route path="/admin" element={<AdminPage />} />
             </Route>
           </Route>
-        </Routes>
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </ToastProvider>
   );
